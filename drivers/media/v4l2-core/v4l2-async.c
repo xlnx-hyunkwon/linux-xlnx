@@ -69,9 +69,34 @@ static bool match_devname(struct v4l2_subdev *sd,
 	return !strcmp(asd->match.device_name, dev_name(sd->dev));
 }
 
+/*
+ * As a measure to support drivers which have not been converted to use
+ * endpoint matching, we also find the parent devices for cross-matching.
+ *
+ * This also allows continued support for matching subdevices which will not
+ * have an endpoint themselves.
+ */
+
+static bool __match_fwnode(struct fwnode_handle *a, struct fwnode_handle *b)
+{
+	if (is_of_node(a) && is_of_node(b))
+		return !of_node_cmp(of_node_full_name(to_of_node(a)),
+				    of_node_full_name(to_of_node(b)));
+	else
+		return a == b;
+}
+
 static bool match_fwnode(struct v4l2_subdev *sd, struct v4l2_async_subdev *asd)
 {
-	return sd->fwnode == asd->match.fwnode;
+	struct fwnode_handle *asd_fwnode = asd->match.fwnode.fwnode;
+	struct fwnode_handle *sd_parent, *asd_parent;
+
+	sd_parent = fwnode_graph_get_port_parent(sd->fwnode);
+	asd_parent = fwnode_graph_get_port_parent(asd_fwnode);
+
+	return __match_fwnode(sd->fwnode, asd_fwnode) ||
+	       __match_fwnode(sd->fwnode, asd_parent) ||
+	       __match_fwnode(sd_parent, asd_fwnode);
 }
 
 static bool match_custom(struct v4l2_subdev *sd, struct v4l2_async_subdev *asd)
