@@ -839,6 +839,13 @@ config VIDEO_OV13858
 	  This is a Video4Linux2 sensor driver for the OmniVision
 	  OV13858 camera.
 
+config VIDEO_VISION
+	tristate "VISION GMSL camera support"
+	depends on I2C && VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	select V4L2_FWNODE
+	help
+	  This driver supports the Vision board based on GMSL cameras.
+
 config VIDEO_VS6624
 	tristate "ST VS6624 sensor support"
 	depends on VIDEO_V4L2 && I2C
