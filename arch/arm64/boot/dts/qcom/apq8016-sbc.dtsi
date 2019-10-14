@@ -221,6 +221,20 @@
 		/* On Low speed expansion */
 			label = "LS-I2C0";
 			status = "okay";
+
+			vision: camera-sensor@6a {
+				compatible = "sensing,vision";
+				reg = <0x6a>;
+				camera-reg = <0x51>;
+
+				port {
+					vision_ep: endpoint {
+						clock-lanes = <1>;
+						data-lanes = <0 2 3 4>;
+						remote-endpoint = <&csiphy0_ep>;
+					};
+				};
+			};
 		};
 
 		i2c@78b8000 {
