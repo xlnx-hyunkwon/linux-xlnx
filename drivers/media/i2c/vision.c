@@ -23,7 +23,7 @@
 #define MAX96705_FORMAT			MEDIA_BUS_FMT_UYVY8_2X8
 
 /* Register 0x00 */
-#define MAX9286_MSTLINKSEL_AUTO		(7 << 5)
+#define MAX9286_MSTLINKSEL_AUTO		(1 << 7)
 #define MAX9286_MSTLINKSEL(n)		((n) << 5)
 #define MAX9286_EN_VS_GEN		BIT(4)
 #define MAX9286_LINKEN(n)		(1 << (n))
@@ -131,15 +131,17 @@
 
 struct vision_device {
 	struct i2c_client		*client; /* Client is MAX9286 */
-	struct i2c_client		*max96705;
-	struct i2c_client		*ap0202;
+	struct i2c_client		*max96705[4];
+	struct i2c_client		*ap0202[4];
 	struct v4l2_subdev		sd;
 	struct media_pad		pad;
 	struct v4l2_ctrl_handler	ctrls;
+	u8				num_sensors;
+	u8				num_isps;
 };
 
 //TODO: remove
-static int ap0202_configure(struct vision_device *dev);
+static int ap0202_configure(struct vision_device *dev, u8 addr, u8 index);
 
 static inline struct vision_device *sd_to_vision(struct v4l2_subdev *sd)
 {
@@ -177,33 +179,33 @@ static int max9286_write(struct vision_device *dev, u8 reg, u8 val)
 	return ret;
 }
 
-static int max96705_write(struct vision_device *dev, u8 reg, u8 val)
+static int max96705_write(struct vision_device *dev, u8 reg, u8 val, u8 index)
 {
 	int ret;
 
-	ret = i2c_smbus_write_byte_data(dev->max96705, reg, val);
+	ret = i2c_smbus_write_byte_data(dev->max96705[index], reg, val);
 	if (ret < 0)
-		dev_err(&dev->max96705->dev,
+		dev_err(&dev->max96705[index]->dev,
 			"%s: register 0x%02x write failed (%d)\n",
 			__func__, reg, ret);
 
 	return ret;
 }
 
-static int max96705_read(struct vision_device *dev, u8 reg)
+static int max96705_read(struct vision_device *dev, u8 reg, u8 index)
 {
 	int ret;
 
-	ret = i2c_smbus_read_byte_data(dev->max96705, reg);
+	ret = i2c_smbus_read_byte_data(dev->max96705[index], reg);
 	if (ret < 0)
-		dev_err(&dev->max96705->dev,
+		dev_err(&dev->max96705[index]->dev,
 			"%s: register 0x%02x read failed (%d)\n",
 			__func__, reg, ret);
 
 	return ret;
 }
 
-static int ap0202_write(struct vision_device *dev, u16 reg, u16 val)
+static int ap0202_write(struct vision_device *dev, u16 reg, u16 val, u8 index)
 {
 	u8 regbuf[4];
 	int ret;
@@ -213,9 +215,9 @@ static int ap0202_write(struct vision_device *dev, u16 reg, u16 val)
 	regbuf[2] = val >> 8;
 	regbuf[3] = val & 0xff;
 
-	ret = i2c_master_send(dev->ap0202, regbuf, 4);
+	ret = i2c_master_send(dev->ap0202[index], regbuf, 4);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "%s: write reg error %d: reg=%x, val=%x\n",
+		dev_err(&dev->ap0202[index]->dev, "%s: write reg error %d: reg=%x, val=%x\n",
 			__func__, ret, reg, val);
 		return ret;
 	}
@@ -223,7 +225,7 @@ static int ap0202_write(struct vision_device *dev, u16 reg, u16 val)
 	return 0;
 }
 
-static int ap0202_read(struct vision_device *dev, u16 reg)
+static int ap0202_read(struct vision_device *dev, u16 reg, u8 index)
 {
 	u8 regbuf[2];
 	int ret;
@@ -231,18 +233,18 @@ static int ap0202_read(struct vision_device *dev, u16 reg)
 	regbuf[0] = reg >> 8;
 	regbuf[1] = reg & 0xff;
 
-	ret = i2c_master_send(dev->ap0202, regbuf, 2);
+	ret = i2c_master_send(dev->ap0202[index], regbuf, 2);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "%s: send reg error %d: reg=%x",
+		dev_err(&dev->ap0202[index]->dev, "%s: send reg error %d: reg=%x",
 			__func__, ret, reg);
 		return ret;
 	}
 
 	msleep(100);
 
-	ret = i2c_master_recv(dev->ap0202, regbuf, 2);
+	ret = i2c_master_recv(dev->ap0202[index], regbuf, 2);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "%s: read reg error %d: reg=%x",
+		dev_err(&dev->ap0202[index]->dev, "%s: read reg error %d: reg=%x",
 			__func__, ret, reg);
 		return ret;
 	}
@@ -306,7 +308,7 @@ void print_max9286_regs(struct vision_device *dev)
         for (i = 0x00; i <= 0xff; i++)
                pr_info("MAX9286: 0x%x: 0x%x", i, max9286_read(dev, i));
 }
-
+/*
 void print_max96705_regs(struct vision_device *dev)
 {
        int i;
@@ -314,7 +316,7 @@ void print_max96705_regs(struct vision_device *dev)
         for (i = 0x00; i <= 0xff; i++)
                pr_info("MAX96705: 0x%x: 0x%x", i, max96705_read(dev, i));
 }
-
+*/
 static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct vision_device *dev = sd_to_vision(sd);
@@ -442,14 +444,6 @@ static int max9286_configure(struct vision_device *dev)
 {
 	int ret;
 
-	ret = max9286_write(dev, 0x0a, 0x11);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	mdelay(5);
-
 	ret = max9286_write(dev, 0x34, 0xb6);
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
@@ -466,7 +460,7 @@ static int max9286_configure(struct vision_device *dev)
 	usleep_range(5000, 8000);
 
 	max9286_write(dev, 0x0b, link_order[0]);
-	mdelay(5);
+	msleep(5);
 
 	ret = max9286_write(dev, 0x12, 0xf3);
 	if (ret < 0) {
@@ -474,229 +468,338 @@ static int max9286_configure(struct vision_device *dev)
 		return ret;
 	}
 
-	usleep_range(5000, 8000);
-	ret = max9286_write(dev, 0x00, 0x81);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	mdelay(5);
+	msleep(5);
 	max9286_write(dev, 0x69, 0x0e);
-	mdelay(5);
+	msleep(5);
 	max9286_write(dev, 0x01, 0x22);
 
-	mdelay(5);
+	msleep(5);
 	ret = max9286_write(dev, 0x63, 0x00);
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
 		return ret;
 	}
 
-	mdelay(5);
+	msleep(5);
 	ret = max9286_write(dev, 0x64, 0x00);
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
 		return ret;
 	}
 
-	mdelay(5);
+	msleep(5);
 
 	return max9286_write(dev, 0x1c, 0xf4);
 }
 
-static int max96705_configure_address(struct vision_device *dev, u8 addr)
+static int max96705_configure_address(struct vision_device *dev, u8 addr, u8 index)
 {
 	int ret;
 
 	/* Change the MAX96705 I2C address. */
-	ret = max96705_write(dev, 0x00, addr << 1);
+	ret = max96705_write(dev, 0x00, addr << 1, index);
 	if (ret < 0) {
-		dev_err(&dev->max96705->dev,
+		dev_err(&dev->max96705[index]->dev,
 			"MAX96705 I2C address change failed (%d)\n", ret);
 		return ret;
 	}
-	dev->max96705->addr = addr;
+	dev->max96705[index]->addr = addr;
 	usleep_range(3500, 5000);
 
 	return 0;
 }
 
-static int max96705_configure(struct vision_device *dev)
+static int max96705_configure(struct vision_device *dev, u8 index)
 {
 	int ret;
 
-	ret = max96705_write(dev, 0x04, 0x47);
+	ret = max96705_write(dev, 0x04, 0x47, index);
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 
-	mdelay(8);
+	msleep(8);
 
-	ret = max96705_write(dev, 0x07, 0x84);
+	ret = max96705_write(dev, 0x07, 0x84, index);
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 
-	mdelay(8);
+	msleep(8);
 
 	/* Reset the serializer */
-	ret = max96705_write(dev, 0x0e, 0x02);
+	ret = max96705_write(dev, 0x0e, 0x02, index);
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 
-	mdelay(10);
-/*	ret = max96705_write(dev, 0x0f, 0x00);
+	msleep(10);
+/*	ret = max96705_write(dev, 0x0f, 0x00, index);
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 
-	ret = max96705_write(dev, 0x0f, 0x02);
+	ret = max96705_write(dev, 0x0f, 0x02, index);
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 */
-	mdelay(10);
+	msleep(10);
 
 	return 0;
 }
 
-static int ap0202_configure(struct vision_device *dev)
+static int ap0202_configure(struct vision_device *dev, u8 addr, u8 index)
 {
 	int ret;
 
-	ret = ap0202_write(dev, 0xc804, 0x40);
+	ret = ap0202_write(dev, 0xc804, 0x40, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc806, 0x4);
+	ret = ap0202_write(dev, 0xc806, 0x4, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc808, 0x477);
+	ret = ap0202_write(dev, 0xc808, 0x477, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc80a, 0x783);
+	ret = ap0202_write(dev, 0xc80a, 0x783, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc814, 0x4b0);
+	ret = ap0202_write(dev, 0xc814, 0x4b0, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc816, 0x960);
+	ret = ap0202_write(dev, 0xc816, 0x960, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc8a0, 0x0);
+	ret = ap0202_write(dev, 0xc8a0, 0x0, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc8a2, 0x0);
+	ret = ap0202_write(dev, 0xc8a2, 0x0, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc8a4, 0x780);
+	ret = ap0202_write(dev, 0xc8a4, 0x780, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xc8a6, 0x438);
+	ret = ap0202_write(dev, 0xc8a6, 0x438, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xcae4, 0x500);
+	ret = ap0202_write(dev, 0xcae4, 0x500, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xcae6, 0x2d0);
+	ret = ap0202_write(dev, 0xcae6, 0x2d0, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0xfc00, 0x2800);
+	ret = ap0202_write(dev, 0xfc00, 0x2800, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
 
-	ret = ap0202_write(dev, 0x0040, 0x8100);
+	ret = ap0202_write(dev, 0x0040, 0x8100, index);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to write AP0202\n");
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
 		return ret;
 	}
 
-	mdelay(100);
+	msleep(100);
+
+	return 0;
+}
+
+static int camera_config(struct vision_device *dev)
+{
+	int i, ret, num_sensors, num_isps;
+	u32 *sensor_addrs;
+	u32 *isp_addrs;
+
+	ret = of_property_count_u32_elems(dev->client->dev.of_node, "sensor-reg");
+	if (ret < 0) {
+		dev_err(&dev->client->dev, "Invalid sensor-reg property\n");
+		return ret;
+	}
+
+	num_sensors = ret;
+	dev->num_sensors = num_sensors;
+	pr_info("Declared %d sensors in devicetree!\n", num_sensors);
+
+	sensor_addrs = devm_kcalloc(&dev->client->dev, num_sensors,
+				    sizeof(*sensor_addrs), GFP_KERNEL);
+
+	ret = of_property_read_u32_array(dev->client->dev.of_node, "sensor-reg",
+					sensor_addrs, num_sensors);
+	if (ret < 0) {
+		dev_err(&dev->client->dev, "Invalid sensor-reg property\n");
+		return ret;
+	}
+
+	ret = of_property_count_u32_elems(dev->client->dev.of_node, "isp-reg");
+	if (ret < 0) {
+		dev_err(&dev->client->dev, "Invalid DT reg property\n");
+		return ret;
+	}
+
+	num_isps = ret;
+	dev->num_isps = num_isps;
+	pr_info("Declared %d ISPs in devicetree!\n", num_isps);
+
+	isp_addrs = devm_kcalloc(&dev->client->dev, num_isps,
+				    sizeof(*isp_addrs), GFP_KERNEL);
+
+	ret = of_property_read_u32_array(dev->client->dev.of_node, "isp-reg",
+					isp_addrs, num_isps);
+	if (ret < 0) {
+		dev_err(&dev->client->dev, "Invalid sensor-reg property\n");
+		return ret;
+	}
+
+	if (num_sensors != num_isps) {
+		pr_err("Number of ISPs (%d) should match sensors (%d)!",
+		       num_sensors, num_isps);
+		return -ENXIO;
+	}
+
+	for (i = 0; i < num_sensors; i++) {
+		/* Create the dummy I2C client for each MAX96705. */
+		dev->max96705[i] = i2c_new_dummy(dev->client->adapter, MAX96705_I2C_ADDRESS);
+		if (!dev->max96705[i]) {
+			return -ENXIO;
+		}
+	}
+
+	for (i = 0; i < num_isps; i++) {
+		/* Create the dummy I2C client for each AP0202. */
+		dev->ap0202[i] = i2c_new_dummy(dev->client->adapter, AP0202_I2C_ADDRESS);
+		if (!dev->ap0202[i]) {
+			return -ENXIO;
+		}
+	}
+
+	/* Configure sensors and ISPs one by one */
+	for (i = 0; i < num_sensors; i++) {
+		ret = max9286_write(dev, 0x0a,
+				    MAX9286_FWDCCEN(i) | MAX9286_REVCCEN(i));
+		if (ret < 0) {
+			dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
+			return ret;
+		}
+
+		msleep(5);
+
+		/* Configure the serializer */
+		ret = max96705_configure(dev, i);
+		if (ret < 0) {
+			dev_err(&dev->max96705[i]->dev, "Unable to configure MAX96705\n");
+			return ret;
+		}
+
+		msleep(10);
+
+		ret = max96705_configure_address(dev, sensor_addrs[i], i);
+		if (ret < 0) {
+			dev_err(&dev->client->dev, "Unable to configure MAX96705 address\n");
+			return ret;
+		}
+
+		pr_info("Configured MAX96705!!");
+
+		msleep(10);
+
+		ret = max96705_write(dev, 0x04, 0x87, i);
+		if (ret < 0) {
+			dev_err(&dev->max96705[i]->dev, "Unable to write MAX96705\n");
+			return ret;
+		}
+
+		msleep(5);
+
+		/* Configure the ISP */
+		ret = ap0202_configure(dev, isp_addrs[i], i);
+		if (ret < 0) {
+			dev_err(&dev->ap0202[i]->dev, "Unable to configure AP0202\n");
+			return ret;
+		}
+
+		usleep_range(5000, 8000);
+		ret = max9286_write(dev, 0x00, MAX9286_MSTLINKSEL_AUTO | MAX9286_LINKEN(i));
+		if (ret < 0) {
+			dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
+			return ret;
+		}
+	}
 
 	return 0;
 }
 
 static int vision_initialize(struct vision_device *dev)
 {
-	u32 addr;
 	int ret;
-
-	ret = of_property_read_u32(dev->client->dev.of_node, "camera-reg",
-					 &addr);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Invalid DT reg property\n");
-		return ret;
-	}
 
 	/* Configure the de-serializer */
 	ret = max9286_configure(dev);
@@ -705,36 +808,9 @@ static int vision_initialize(struct vision_device *dev)
 		return ret;
 	}
 
-	mdelay(10);
+	msleep(10);
 
 	pr_info("Configured MAX9286!!");
-
-	/* Configure the serializer */
-	ret = max96705_configure(dev);
-	if (ret < 0) {
-		dev_err(&dev->max96705->dev, "Unable to configure MAX96705\n");
-		return ret;
-	}
-
-	mdelay(10);
-
-	ret = max96705_configure_address(dev, addr);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX96705 address\n");
-		return ret;
-	}
-
-	pr_info("Configured MAX96705!!");
-
-	mdelay(10);
-
-	ret = max96705_write(dev, 0x04, 0x87);
-	if (ret < 0) {
-		dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
-		return ret;
-	}
-
-	mdelay(5);
 
 	ret = max9286_write(dev, 0x0c, 0x91);
 	if (ret < 0) {
@@ -742,22 +818,21 @@ static int vision_initialize(struct vision_device *dev)
 		return ret;
 	}
 
-	mdelay(5);
+	msleep(5);
 
-	/* Configure the ISP */
-	ret = ap0202_configure(dev);
+	ret = camera_config(dev);
 	if (ret < 0) {
-		dev_err(&dev->ap0202->dev, "Unable to configure AP0202\n");
+		dev_err(&dev->client->dev, "Unable to configure cameras\n");
 		return ret;
 	}
-
+/*
 	pr_info("0xCAEA: %04x\n", ap0202_read(dev, 0xcaea));
 	pr_info("0xCAFC: %04x\n", ap0202_read(dev, 0xcafc));
 	pr_info("0xCAE4: %04x\n", ap0202_read(dev, 0xcae4));
 	pr_info("0xCAE6: %04x\n", ap0202_read(dev, 0xcae6));
 
 	pr_info("Configured AP0202!!");
-
+*/
 	max9286_configure_i2c(dev, false);
 
 	return 0;
@@ -766,28 +841,14 @@ static int vision_initialize(struct vision_device *dev)
 static int vision_probe(struct i2c_client *client)
 {
 	struct vision_device *dev;
-	struct fwnode_handle *ep;
 	int ret;
+	unsigned int i;
 
 	dev = devm_kzalloc(&client->dev, sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
 	dev->client = client;
-
-	/* Create the dummy I2C client for the MAX96705. */
-	dev->max96705 = i2c_new_dummy(client->adapter, MAX96705_I2C_ADDRESS);
-	if (!dev->max96705) {
-		ret = -ENXIO;
-		goto error;
-	}
-
-	/* Create the dummy I2C client for the AP0202. */
-	dev->ap0202 = i2c_new_dummy(client->adapter, AP0202_I2C_ADDRESS);
-	if (!dev->ap0202) {
-		ret = -ENXIO;
-		goto error;
-	}
 
 	/* Initialize the hardware. */
 	ret = vision_initialize(dev);
@@ -827,11 +888,16 @@ error_free_ctrls:
 	v4l2_ctrl_handler_free(&dev->ctrls);
 error:
 	media_entity_cleanup(&dev->sd.entity);
-	if (dev->max96705)
-		i2c_unregister_device(dev->max96705);
+	for (i = 0; i < dev->num_sensors; i++) {
+		if (dev->max96705[i])
+			i2c_unregister_device(dev->max96705[i]);
+	}
 
-	if (dev->ap0202)
-		i2c_unregister_device(dev->ap0202);
+	for (i = 0; i < dev->num_isps; i++) {
+		if (dev->ap0202[i])
+			i2c_unregister_device(dev->ap0202[i]);
+	}
+
 
 	dev_err(&client->dev, "probe failed\n");
 
@@ -841,12 +907,22 @@ error:
 static int vision_remove(struct i2c_client *client)
 {
 	struct vision_device *dev = i2c_to_vision(client);
+	unsigned int i;
 
 	fwnode_handle_put(dev->sd.fwnode);
 	v4l2_async_unregister_subdev(&dev->sd);
 	v4l2_ctrl_handler_free(&dev->ctrls);
 	media_entity_cleanup(&dev->sd.entity);
-	i2c_unregister_device(dev->max96705);
+
+	for (i = 0; i < dev->num_sensors; i++) {
+		if (dev->max96705[i])
+			i2c_unregister_device(dev->max96705[i]);
+	}
+
+	for (i = 0; i < dev->num_isps; i++) {
+		if (dev->ap0202[i])
+			i2c_unregister_device(dev->ap0202[i]);
+	}
 
 	return 0;
 }

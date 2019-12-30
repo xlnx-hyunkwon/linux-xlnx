@@ -225,7 +225,8 @@
 			vision: camera-sensor@6a {
 				compatible = "sensing,vision";
 				reg = <0x6a>;
-				camera-reg = <0x51>;
+				sensor-reg = <0x51 0x52 0x53 0x54>;
+				isp-reg = <0x61 0x62 0x63 0x64>;
 
 				port {
 					vision_ep: endpoint {
