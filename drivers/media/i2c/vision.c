@@ -3,6 +3,7 @@
  * The driver is the combination of AR0231 + AP0202 + MAX96705 + MAX9286
  */
 
+#include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/fwnode.h>
 #include <linux/init.h>
@@ -838,6 +839,106 @@ static int vision_initialize(struct vision_device *dev)
 	return 0;
 }
 
+static int ap0202_read(struct vision_device *dev, u16 reg, u8 index);
+struct vision_device *dev_debug;
+
+static ssize_t ultra96_vision_debugfs_write(struct file *f,
+		const char __user *buf, size_t size, loff_t *pos)
+{
+	char *kern_buff, *kern_buff_start;
+	char *cmd, *addr, *val, *idx;
+	u32 _addr = 0x7;
+	u32 _val = 0x7, _idx = 0x7;
+	int ret;
+
+	if (*pos != 0 || size <= 0)
+		return -EINVAL;
+
+	kern_buff = kzalloc(size, GFP_KERNEL);
+	if (!kern_buff)
+		return -ENOMEM;
+	kern_buff_start = kern_buff;
+
+	ret = strncpy_from_user(kern_buff, buf, size);
+	if (ret < 0) {
+		kfree(kern_buff_start);
+		return ret;
+	}
+
+	cmd = strsep(&kern_buff, " ");
+	addr = strsep(&kern_buff, " ");
+	if (addr)
+		kstrtou32(addr, 16, &_addr);
+	val = strsep(&kern_buff, " ");
+	if (val)
+		kstrtou32(val, 16, &_val);
+	idx = strsep(&kern_buff, " ");
+	if (idx)
+		kstrtou32(idx, 16, &_idx);
+	pr_err("%s %d %x\n", __FUNCTION__, __LINE__, dev_debug);
+	pr_err("%s %d %s %s %s %s\n", __FUNCTION__, __LINE__, cmd, addr, val, idx);
+	pr_err("%s %d %x %x %x\n", __FUNCTION__, __LINE__, _addr, _val, _idx);
+
+	if (!strcasecmp(cmd, "a0r")) {
+		pr_err("ap202 %s %d 0x%x @ 0x%x, idx = %u\n",
+				__FUNCTION__, __LINE__,
+				ap0202_read(dev_debug, _addr, _idx), _addr, _idx);
+	} else if (!strcasecmp(cmd, "a0w")) {
+		ap0202_write(dev_debug, _addr, _val, _idx);
+	} else if (!strcasecmp(cmd, "m0r")) {
+		pr_err("max9286 %s %d 0x%x @ 0x%x\n",
+				__FUNCTION__, __LINE__,
+				max9286_read(dev_debug, _addr), _addr);
+	} else if (!strcasecmp(cmd, "m0w")) {
+		max9286_write(dev_debug, _addr, _val);
+	} else if (!strcasecmp(cmd, "m1r")) {
+		pr_err("max96705 %s %d 0x%x @ 0x%x, idx = %u\n",
+				__FUNCTION__, __LINE__,
+				max96705_read(dev_debug, _addr, _idx), _addr, _idx);
+	} else if (!strcasecmp(cmd, "m1w")) {
+		max96705_write(dev_debug, _addr, _val, _idx);
+	} else {
+		pr_err("%s %d\n", __FUNCTION__, __LINE__);
+	}
+
+	kfree(kern_buff_start);
+	return size;
+}
+
+static const struct file_operations fops_ultra96_vision_dbgfs = {
+	.owner = THIS_MODULE,
+	.write = ultra96_vision_debugfs_write,
+};
+
+static int ultra96_vision_debugfs_init(struct vision_device *dev)
+{
+	int err;
+	struct dentry *ultra96_vision_debugfs_dir, *ultra96_vision_debugfs_file;
+
+	ultra96_vision_debugfs_dir = debugfs_create_dir("ultra96_vision", NULL);
+	if (!ultra96_vision_debugfs_dir) {
+		pr_err("debugfs_create_dir failed\n");
+		return -ENODEV;
+	}
+
+	ultra96_vision_debugfs_file =
+		debugfs_create_file("testcase", 0444,
+				    ultra96_vision_debugfs_dir, NULL,
+				    &fops_ultra96_vision_dbgfs);
+	if (!ultra96_vision_debugfs_file) {
+		pr_err("debugfs_create_file failed\n");
+		err = -ENODEV;
+		goto err_dbgfs;
+	}
+	dev_debug = dev;
+	return 0;
+
+err_dbgfs:
+	debugfs_remove_recursive(ultra96_vision_debugfs_dir);
+	ultra96_vision_debugfs_dir = NULL;
+	return err;
+}
+
 static int vision_probe(struct i2c_client *client)
 {
 	struct vision_device *dev;
@@ -881,6 +982,8 @@ static int vision_probe(struct i2c_client *client)
 		goto error_free_ctrls;
 
 	pr_info("Vision driver registered\n");
+
+	ultra96_vision_debugfs_init(dev);
 
 	return 0;
 
