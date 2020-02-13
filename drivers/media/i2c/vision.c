@@ -823,12 +823,14 @@ static int camera_config(struct vision_device *dev)
 
 		msleep(5);
 
+#if 0
 		/* Configure the ISP */
 		ret = ap0202_configure(dev, isp_addrs[i], i);
 		if (ret < 0) {
 			dev_err(&dev->ap0202[i]->dev, "Unable to configure AP0202\n");
 			return ret;
 		}
+#endif
 
 		usleep_range(5000, 8000);
 		ret = max9286_write(dev, 0x00, MAX9286_MSTLINKSEL_AUTO | MAX9286_LINKEN(i));
