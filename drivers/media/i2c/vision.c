@@ -207,6 +207,25 @@ static int max96705_read(struct vision_device *dev, u8 reg, u8 index)
 	return ret;
 }
 
+static int ap0202_write8(struct vision_device *dev, u16 reg, u8 val, u8 index)
+{
+	u8 regbuf[3];
+	int ret;
+
+	regbuf[0] = reg >> 8;
+	regbuf[1] = reg & 0xff;
+	regbuf[2] = val;
+
+	ret = i2c_master_send(dev->ap0202[index], regbuf, 3);
+	if (ret < 0) {
+		dev_err(&dev->ap0202[index]->dev, "%s: write8 reg error %d: reg=%x, val=%x\n",
+			__func__, ret, reg, val);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int ap0202_write(struct vision_device *dev, u16 reg, u16 val, u8 index)
 {
 	u8 regbuf[4];
