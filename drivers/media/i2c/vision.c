@@ -960,8 +960,8 @@ static ssize_t ultra96_vision_debugfs_write(struct file *f,
 		const char __user *buf, size_t size, loff_t *pos)
 {
 	char *kern_buff, *kern_buff_start;
-	char *cmd, *addr, *val, *idx;
-	u32 _addr = 0x7;
+	char *cmd, *width, *addr, *val, *idx;
+	u32 _width = 0x7, _addr = 0x7;
 	u32 _val = 0x7, _idx = 0x7;
 	int ret;
 
@@ -980,6 +980,9 @@ static ssize_t ultra96_vision_debugfs_write(struct file *f,
 	}
 
 	cmd = strsep(&kern_buff, " ");
+	width = strsep(&kern_buff, " ");
+	if (width)
+		kstrtou32(width, 10, &_width);
 	addr = strsep(&kern_buff, " ");
 	if (addr)
 		kstrtou32(addr, 16, &_addr);
@@ -994,11 +997,23 @@ static ssize_t ultra96_vision_debugfs_write(struct file *f,
 	pr_err("%s %d %x %x %x\n", __FUNCTION__, __LINE__, _addr, _val, _idx);
 
 	if (!strcasecmp(cmd, "a0r")) {
-		pr_err("ap202 %s %d 0x%x @ 0x%x, idx = %u\n",
-				__FUNCTION__, __LINE__,
-				ap0202_read(dev_debug, _addr, _idx), _addr, _idx);
+		if (_width == 8) {
+			pr_err("ap202 %s %d 0x%x @ 0x%x, idx = %u\n",
+					__FUNCTION__, __LINE__,
+					ap0202_read8(dev_debug, _addr, _idx),
+					_addr, _idx);
+		} else {
+			pr_err("ap202 %s %d 0x%x @ 0x%x, idx = %u\n",
+					__FUNCTION__, __LINE__,
+					ap0202_read(dev_debug, _addr, _idx),
+					_addr, _idx);
+		}
 	} else if (!strcasecmp(cmd, "a0w")) {
-		ap0202_write(dev_debug, _addr, _val, _idx);
+		if (_width == 8) {
+			ap0202_write8(dev_debug, _addr, _val, _idx);
+		} else {
+			ap0202_write(dev_debug, _addr, _val, _idx);
+		}
 	} else if (!strcasecmp(cmd, "m0r")) {
 		pr_err("max9286 %s %d 0x%x @ 0x%x\n",
 				__FUNCTION__, __LINE__,
