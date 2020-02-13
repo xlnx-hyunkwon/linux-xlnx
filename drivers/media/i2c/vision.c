@@ -275,6 +275,35 @@ static int ap0202_read(struct vision_device *dev, u16 reg, u8 index)
 	return (regbuf[1] | (regbuf[0] << 8));
 }
 
+static u8 ap0202_read8(struct vision_device *dev, u16 reg, u8 index)
+{
+	u8 regbuf[2];
+	int ret;
+
+	regbuf[0] = reg >> 8;
+	regbuf[1] = reg & 0xff;
+
+	ret = i2c_master_send(dev->ap0202[index], regbuf, 2);
+	if (ret < 0) {
+		dev_err(&dev->ap0202[index]->dev, "%s: send reg error %d: reg=%x",
+			__func__, ret, reg);
+		return ret;
+	}
+
+	msleep(100);
+
+	ret = i2c_master_recv(dev->ap0202[index], regbuf, 1);
+	if (ret < 0) {
+		dev_err(&dev->ap0202[index]->dev, "%s: read reg error %d: reg=%x",
+			__func__, ret, reg);
+		return ret;
+	}
+
+	msleep(100);
+
+	return regbuf[0];
+}
+
 static int ap0202_config_change(struct vision_device *dev, u8 index)
 {
 	int ret;
