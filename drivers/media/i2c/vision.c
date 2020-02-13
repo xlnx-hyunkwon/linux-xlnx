@@ -137,6 +137,7 @@ struct vision_device {
 	struct v4l2_subdev		sd;
 	struct media_pad		pad;
 	struct v4l2_ctrl_handler	ctrls;
+	struct v4l2_mbus_framefmt	mf;
 	u8				num_sensors;
 	u8				num_isps;
 };
@@ -253,6 +254,29 @@ static int ap0202_read(struct vision_device *dev, u16 reg, u8 index)
 	msleep(100);
 
 	return (regbuf[1] | (regbuf[0] << 8));
+}
+
+static int ap0202_config_change(struct vision_device *dev, u8 index)
+{
+	int ret;
+
+	ret = ap0202_write(dev, 0xfc00, 0x2800, index);
+	if (ret < 0) {
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
+		return ret;
+	}
+
+	msleep(100);
+
+	ret = ap0202_write(dev, 0x0040, 0x8100, index);
+	if (ret < 0) {
+		dev_err(&dev->ap0202[index]->dev, "Unable to write AP0202\n");
+		return ret;
+	}
+
+	msleep(100);
+
+	return 0;
 }
 
 static int max9286_check_video_links(struct vision_device *dev)
@@ -379,18 +403,37 @@ static int vision_get_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_subdev_format *format)
 {
 	struct v4l2_mbus_framefmt *mf = &format->format;
+	struct vision_device *dev = sd_to_vision(sd);
 
 	if (format->pad)
 		return -EINVAL;
 
-	mf->width		= MAX96705_WIDTH;
-	mf->height		= MAX96705_HEIGHT;
-	mf->code		= MAX96705_FORMAT;
+	*mf = dev->mf;
+
+	return 0;
+}
+
+static int vision_set_fmt(struct v4l2_subdev *sd,
+			   struct v4l2_subdev_pad_config *cfg,
+			   struct v4l2_subdev_format *format)
+{
+	struct v4l2_mbus_framefmt *mf = &format->format;
+	struct vision_device *dev = sd_to_vision(sd);
+
+	if (format->pad)
+		return -EINVAL;
+
 	mf->colorspace		= V4L2_COLORSPACE_SRGB;
 	mf->field		= V4L2_FIELD_NONE;
 	mf->ycbcr_enc		= V4L2_YCBCR_ENC_DEFAULT;
 	mf->quantization	= V4L2_QUANTIZATION_DEFAULT;
 	mf->xfer_func		= V4L2_XFER_FUNC_DEFAULT;
+
+	ap0202_write(dev, 0xcae4, mf->width, 0x0);
+	ap0202_write(dev, 0xcae6, mf->height, 0x0);
+	ap0202_config_change(dev, 0x0);
+
+	dev->mf = *mf;
 
 	return 0;
 }
@@ -402,7 +445,7 @@ static struct v4l2_subdev_video_ops vision_video_ops = {
 static const struct v4l2_subdev_pad_ops vision_subdev_pad_ops = {
 	.enum_mbus_code = vision_enum_mbus_code,
 	.get_fmt	= vision_get_fmt,
-	.set_fmt	= vision_get_fmt,
+	.set_fmt	= vision_set_fmt,
 };
 
 static struct v4l2_subdev_ops vision_subdev_ops = {
@@ -976,6 +1019,18 @@ static int vision_probe(struct i2c_client *client)
 	ret = media_entity_pads_init(&dev->sd.entity, 1, &dev->pad);
 	if (ret < 0)
 		goto error_free_ctrls;
+
+	/* default format */
+	dev->mf.colorspace = V4L2_COLORSPACE_SRGB;
+	dev->mf.field = V4L2_FIELD_NONE;
+	dev->mf.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
+	dev->mf.quantization = V4L2_QUANTIZATION_DEFAULT;
+	dev->mf.xfer_func = V4L2_XFER_FUNC_DEFAULT;
+
+	/* these are user configuration in set_fmt() */
+	dev->mf.width = MAX96705_WIDTH;
+	dev->mf.height = MAX96705_HEIGHT;
+	dev->mf.code = MAX96705_FORMAT;
 
 	ret = v4l2_async_register_subdev(&dev->sd);
 	if (ret)
