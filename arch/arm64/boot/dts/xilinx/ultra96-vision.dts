@@ -756,6 +756,7 @@
 					#size-cells = <0x0>;
 					reg = <0x0>;
 					label = "LS-I2C0";
+					/*
 					vision0: camera-sensor@6a {
 						compatible = "sensing,vision";
 						reg = <0x6a>;
@@ -771,6 +772,74 @@
 								data-lanes = <0 2 3 4>;
 							//	remote-endpoint = <&csiphy0_ep>;
 								remote-endpoint = <0x12>;
+							};
+						};
+					};
+					*/
+					gmsl-deserializer@6a {
+						compatible = "maxim,max9286";
+						reg = <0x6a>;
+						ports {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							port@0 {
+								reg = <0>;
+								max9286_in0: endpoint {
+									remote-endpoint = <&vision_ep0>;
+								};
+							};
+							port@1 {
+								reg = <1>;
+							};
+							port@2 {
+								reg = <2>;
+							};
+							port@3 {
+								reg = <3>;
+							};
+							port@4 {
+								reg = <4>;
+								max9286_out: endpoint {
+									data-lanes = <1 2 3 4>;
+									remote-endpoint = <0x12>;
+								};
+							};
+						};
+						i2c-mux {
+							#address-cells = <1>;
+							#size-cells = <0>;
+							i2c@0 {
+								#address-cells = <1>;
+								#size-cells = <0>;
+								reg = <0>;
+								/*
+								camera@51 {
+								  reg = <0x51>;
+								  port {
+								    rdacm20_out0: endpoint {
+								      remote-endpoint = <&max9286_in0>;
+								    };
+								  };
+								};
+								*/
+								vision0: camera-sensor@6a {
+									compatible = "sensing,vision";
+									reg = <0x6a>;
+//									sensor-reg = <0x51 0x52 0x53 0x54>;
+//									isp-reg = <0x61 0x62 0x63 0x64>;
+									// one camera
+									sensor-reg = <0x51>;
+									isp-reg = <0x61>;
+									port {
+										vision_ep0: endpoint {
+											clock-lanes = <1>;
+											data-lanes = <0 2 3 4>;
+										//	remote-endpoint = <&csiphy0_ep>;
+										//	remote-endpoint = <0x12>;
+											remote-endpoint = <&max9286_in0>;
+										};
+									};
+								};
 							};
 						};
 					};
@@ -795,7 +864,7 @@
 								clock-lanes = <1>;
 								data-lanes = <0 2 3 4>;
 							//	remote-endpoint = <&csiphy0_ep>;
-								remote-endpoint = <0x12>;
+							//	remote-endpoint = <0x12>;
 							};
 						};
 					};
@@ -1647,8 +1716,8 @@
 					endpoint {
 //						data-lanes = <0x1 0x2>;
 //						remote-endpoint = <0x28>;
-						data-lanes = <0 2 3 4>;
-						remote-endpoint = <&vision_ep0>;
+						data-lanes = <1 2 3 4>;
+						remote-endpoint = <&max9286_out>;
 						phandle = <0x12>;
 					};
 				};
