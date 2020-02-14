@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * The driver is the combination of AR0231 + AP0202 + MAX96705 + MAX9286
+ * The driver is the combination of AR0231 + AP0202 + MAX96705
  */
 
 #include <linux/debugfs.h>
@@ -22,113 +22,6 @@
 #define MAX96705_WIDTH			1280
 #define MAX96705_HEIGHT			800
 #define MAX96705_FORMAT			MEDIA_BUS_FMT_UYVY8_1X16
-
-/* Register 0x00 */
-#define MAX9286_MSTLINKSEL_AUTO		(1 << 7)
-#define MAX9286_MSTLINKSEL(n)		((n) << 5)
-#define MAX9286_EN_VS_GEN		BIT(4)
-#define MAX9286_LINKEN(n)		(1 << (n))
-/* Register 0x01 */
-#define MAX9286_FSYNCMODE_ECU		(3 << 6)
-#define MAX9286_FSYNCMODE_EXT		(2 << 6)
-#define MAX9286_FSYNCMODE_INT_OUT	(1 << 6)
-#define MAX9286_FSYNCMODE_INT_HIZ	(0 << 6)
-#define MAX9286_GPIEN			BIT(5)
-#define MAX9286_ENLMO_RSTFSYNC		BIT(2)
-#define MAX9286_FSYNCMETH_AUTO		(2 << 0)
-#define MAX9286_FSYNCMETH_SEMI_AUTO	(1 << 0)
-#define MAX9286_FSYNCMETH_MANUAL	(0 << 0)
-#define MAX9286_REG_FSYNC_PERIOD_L	0x06
-#define MAX9286_REG_FSYNC_PERIOD_M	0x07
-#define MAX9286_REG_FSYNC_PERIOD_H	0x08
-/* Register 0x0a */
-#define MAX9286_FWDCCEN(n)		(1 << ((n) + 4))
-#define MAX9286_REVCCEN(n)		(1 << (n))
-/* Register 0x0c */
-#define MAX9286_HVEN			BIT(7)
-#define MAX9286_EDC_6BIT_HAMMING	(2 << 5)
-#define MAX9286_EDC_6BIT_CRC		(1 << 5)
-#define MAX9286_EDC_1BIT_PARITY		(0 << 5)
-#define MAX9286_DESEL			BIT(4)
-#define MAX9286_INVVS			BIT(3)
-#define MAX9286_INVHS			BIT(2)
-#define MAX9286_HVSRC_D0		(2 << 0)
-#define MAX9286_HVSRC_D14		(1 << 0)
-#define MAX9286_HVSRC_D18		(0 << 0)
-/* Register 0x12 */
-#define MAX9286_CSILANECNT(n)		(((n) - 1) << 6)
-#define MAX9286_CSIDBL			BIT(5)
-#define MAX9286_DBL			BIT(4)
-#define MAX9286_DATATYPE_USER_8BIT	(11 << 0)
-#define MAX9286_DATATYPE_USER_YUV_12BIT	(10 << 0)
-#define MAX9286_DATATYPE_USER_24BIT	(9 << 0)
-#define MAX9286_DATATYPE_RAW14		(8 << 0)
-#define MAX9286_DATATYPE_RAW11		(7 << 0)
-#define MAX9286_DATATYPE_RAW10		(6 << 0)
-#define MAX9286_DATATYPE_RAW8		(5 << 0)
-#define MAX9286_DATATYPE_YUV422_10BIT	(4 << 0)
-#define MAX9286_DATATYPE_YUV422_8BIT	(3 << 0)
-#define MAX9286_DATATYPE_RGB555		(2 << 0)
-#define MAX9286_DATATYPE_RGB565		(1 << 0)
-#define MAX9286_DATATYPE_RGB888		(0 << 0)
-/* Register 0x15 */
-#define MAX9286_VC(n)			((n) << 5)
-#define MAX9286_VCTYPE			BIT(4)
-#define MAX9286_CSIOUTEN		BIT(3)
-#define MAX9286_0X15_RESV		(3 << 0)
-/* Register 0x1b */
-#define MAX9286_SWITCHIN(n)		(1 << ((n) + 4))
-#define MAX9286_ENEQ(n)			(1 << (n))
-/* Register 0x27 */
-#define MAX9286_LOCKED			BIT(7)
-/* Register 0x31 */
-#define MAX9286_FSYNC_LOCKED		BIT(6)
-/* Register 0x34 */
-#define MAX9286_I2CLOCACK		BIT(7)
-#define MAX9286_I2CSLVSH_1046NS_469NS	(3 << 5)
-#define MAX9286_I2CSLVSH_938NS_352NS	(2 << 5)
-#define MAX9286_I2CSLVSH_469NS_234NS	(1 << 5)
-#define MAX9286_I2CSLVSH_352NS_117NS	(0 << 5)
-#define MAX9286_I2CMSTBT_837KBPS	(7 << 2)
-#define MAX9286_I2CMSTBT_533KBPS	(6 << 2)
-#define MAX9286_I2CMSTBT_339KBPS	(5 << 2)
-#define MAX9286_I2CMSTBT_173KBPS	(4 << 2)
-#define MAX9286_I2CMSTBT_105KBPS	(3 << 2)
-#define MAX9286_I2CMSTBT_84KBPS		(2 << 2)
-#define MAX9286_I2CMSTBT_28KBPS		(1 << 2)
-#define MAX9286_I2CMSTBT_8KBPS		(0 << 2)
-#define MAX9286_I2CSLVTO_NONE		(3 << 0)
-#define MAX9286_I2CSLVTO_1024US		(2 << 0)
-#define MAX9286_I2CSLVTO_256US		(1 << 0)
-#define MAX9286_I2CSLVTO_64US		(0 << 0)
-/* Register 0x3b */
-#define MAX9286_REV_TRF(n)		((n) << 4)
-#define MAX9286_REV_AMP(n)		((((n) - 30) / 10) << 1) /* in mV */
-#define MAX9286_REV_AMP_X		BIT(0)
-/* Register 0x3f */
-#define MAX9286_EN_REV_CFG		BIT(6)
-#define MAX9286_REV_FLEN(n)		((n) - 20)
-/* Register 0x49 */
-#define MAX9286_VIDEO_DETECT_MASK	0x0f
-/* Register 0x69 */
-#define MAX9286_LFLTBMONMASKED		BIT(7)
-#define MAX9286_LOCKMONMASKED		BIT(6)
-#define MAX9286_AUTOCOMBACKEN		BIT(5)
-#define MAX9286_AUTOMASKEN		BIT(4)
-#define MAX9286_MASKLINK(n)		((n) << 0)
-
-#define MAX9286_NUM_GMSL		4
-#define MAX9286_N_SINKS			4
-#define MAX9286_N_PADS			5
-#define MAX9286_SRC_PAD			4
-
-#define MAXIM_I2C_I2C_SPEED_400KHZ	MAX9286_I2CMSTBT_339KBPS
-#define MAXIM_I2C_I2C_SPEED_100KHZ	MAX9286_I2CMSTBT_105KBPS
-#define MAXIM_I2C_SPEED			MAXIM_I2C_I2C_SPEED_100KHZ
-
-#define SOURCE_MASK			BIT(0)
-#define ROUTE_MASK			BIT(0)
-#define CSI2_DATA_LANES			4
 
 struct vision_device {
 	struct i2c_client		*client; /* Client is MAX9286 */
@@ -153,32 +46,6 @@ static inline struct vision_device *sd_to_vision(struct v4l2_subdev *sd)
 static inline struct vision_device *i2c_to_vision(struct i2c_client *client)
 {
 	return sd_to_vision(i2c_get_clientdata(client));
-}
-
-static int max9286_read(struct vision_device *dev, u8 reg)
-{
-	int ret;
-
-	ret = i2c_smbus_read_byte_data(dev->client, reg);
-	if (ret < 0)
-		dev_err(&dev->client->dev,
-			"%s: register 0x%02x read failed (%d)\n",
-			__func__, reg, ret);
-
-	return ret;
-}
-
-static int max9286_write(struct vision_device *dev, u8 reg, u8 val)
-{
-	int ret;
-
-	ret = i2c_smbus_write_byte_data(dev->client, reg, val);
-	if (ret < 0)
-		dev_err(&dev->client->dev,
-			"%s: register 0x%02x write failed (%d)\n",
-			__func__, reg, ret);
-
-	return ret;
 }
 
 static int max96705_write(struct vision_device *dev, u8 reg, u8 val, u8 index)
@@ -327,111 +194,14 @@ static int ap0202_config_change(struct vision_device *dev, u8 index)
 	return 0;
 }
 
-static int max9286_check_video_links(struct vision_device *dev)
-{
-	unsigned int i;
-	int ret;
-
-	/*
-	 * Make sure valid video links are detected.
-	 * The delay is not characterized in de-serializer manual, wait up
-	 * to 5 ms.
-	 */
-	for (i = 0; i < 10; i++) {
-		ret = max9286_read(dev, 0x49);
-		if (ret < 0)
-			return -EIO;
-
-		if ((ret & MAX9286_VIDEO_DETECT_MASK) == SOURCE_MASK)
-			break;
-
-		usleep_range(3500, 5000);
-	}
-
-	if (i == 10) {
-		dev_err(&dev->client->dev,
-			"Unable to detect video links 0x49: 0x%02x\n", ret);
-		return -EIO;
-	}
-
-	/* Make sure all enabled links are locked (4ms max). */
-	for (i = 0; i < 10; i++) {
-		ret = max9286_read(dev, 0x27);
-		if (ret < 0)
-			return -EIO;
-
-		if (ret & MAX9286_LOCKED)
-			break;
-
-		usleep_range(3500, 4500);
-	}
-
-	if (i == 10) {
-		dev_err(&dev->client->dev, "Not all enabled links locked\n");
-		return -EIO;
-	}
-
-	return 0;
-}
-
-void print_max9286_regs(struct vision_device *dev)
-{
-       int i;
-
-        for (i = 0x00; i <= 0xff; i++)
-               pr_info("MAX9286: 0x%x: 0x%x", i, max9286_read(dev, i));
-}
-/*
-void print_max96705_regs(struct vision_device *dev)
-{
-       int i;
-
-        for (i = 0x00; i <= 0xff; i++)
-               pr_info("MAX96705: 0x%x: 0x%x", i, max96705_read(dev, i));
-}
-*/
 static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	struct vision_device *dev = sd_to_vision(sd);
-	unsigned int i;
-	bool sync = false;
-	int ret;
-
 	/* Nothing yet */
 	if (enable) {
-		ret = max9286_check_video_links(dev);
-		if (ret)
-			return ret;
-
-		/*
-		 * Wait until frame synchronization is locked.
-		 *
-		 * Manual says frame sync locking should take ~6 VTS.
-		 * From pratical experience at least 8 are required. Give
-		 * 12 complete frames time (~33ms at 30 fps) to achieve frame
-		 * locking before returning error.
-		 */
-		for (i = 0; i < 36; i++) {
-			if (max9286_read(dev, 0x31) & MAX9286_FSYNC_LOCKED) {
-				sync = true;
-				break;
-			}
-			usleep_range(9000, 11000);
-		}
-
-		if (!sync) {
-			dev_err(&dev->client->dev,
-				"Failed to get frame synchronization\n");
-			return -EINVAL;
-		}
-
 		pr_info("Enabling\n");
-		max9286_write(dev, 0x15, 0x80 | MAX9286_VCTYPE |
-			      MAX9286_CSIOUTEN | MAX9286_0X15_RESV);
 
 	} else {
 		pr_info("Disabling\n");
-		max9286_write(dev, 0x15, MAX9286_VCTYPE | MAX9286_0X15_RESV);
 	}
 
 	return 0;
@@ -521,89 +291,6 @@ static struct v4l2_subdev_ops vision_subdev_ops = {
 	.video		= &vision_video_ops,
 	.pad		= &vision_subdev_pad_ops,
 };
-
-static void max9286_configure_i2c(struct vision_device *dev, bool localack)
-{
-	u8 config = MAX9286_I2CSLVSH_469NS_234NS | MAX9286_I2CSLVTO_1024US |
-		    MAXIM_I2C_SPEED;
-
-	if (localack)
-		config |= MAX9286_I2CLOCACK;
-
-	max9286_write(dev, 0x34, config);
-	usleep_range(3000, 5000);
-}
-
-static const u8 link_order[] = {
-	(3 << 6) | (2 << 4) | (1 << 2) | (0 << 0), /* xxxx */
-	(3 << 6) | (2 << 4) | (1 << 2) | (0 << 0), /* xxx0 */
-	(3 << 6) | (2 << 4) | (0 << 2) | (1 << 0), /* xx0x */
-	(3 << 6) | (2 << 4) | (1 << 2) | (0 << 0), /* xx10 */
-	(3 << 6) | (0 << 4) | (2 << 2) | (1 << 0), /* x0xx */
-	(3 << 6) | (1 << 4) | (2 << 2) | (0 << 0), /* x1x0 */
-	(3 << 6) | (1 << 4) | (0 << 2) | (2 << 0), /* x10x */
-	(3 << 6) | (1 << 4) | (1 << 2) | (0 << 0), /* x210 */
-	(0 << 6) | (3 << 4) | (2 << 2) | (1 << 0), /* 0xxx */
-	(1 << 6) | (3 << 4) | (2 << 2) | (0 << 0), /* 1xx0 */
-	(1 << 6) | (3 << 4) | (0 << 2) | (2 << 0), /* 1x0x */
-	(2 << 6) | (3 << 4) | (1 << 2) | (0 << 0), /* 2x10 */
-	(1 << 6) | (0 << 4) | (3 << 2) | (2 << 0), /* 10xx */
-	(2 << 6) | (1 << 4) | (3 << 2) | (0 << 0), /* 21x0 */
-	(2 << 6) | (1 << 4) | (0 << 2) | (3 << 0), /* 210x */
-	(3 << 6) | (2 << 4) | (1 << 2) | (0 << 0), /* 3210 */
-};
-
-static int max9286_configure(struct vision_device *dev)
-{
-	int ret;
-
-	ret = max9286_write(dev, 0x34, 0xb6);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	usleep_range(5000, 8000);
-	ret = max9286_write(dev, 0x15, 0x03);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	usleep_range(5000, 8000);
-
-	max9286_write(dev, 0x0b, link_order[0]);
-	msleep(5);
-
-	ret = max9286_write(dev, 0x12, 0xf3);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	msleep(5);
-	max9286_write(dev, 0x69, 0x0e);
-	msleep(5);
-	max9286_write(dev, 0x01, 0x22);
-
-	msleep(5);
-	ret = max9286_write(dev, 0x63, 0x00);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	msleep(5);
-	ret = max9286_write(dev, 0x64, 0x00);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	msleep(5);
-
-	return max9286_write(dev, 0x1c, 0xf4);
-}
 
 static int max96705_configure_address(struct vision_device *dev, u8 addr, u8 index)
 {
@@ -792,6 +479,7 @@ static int camera_config(struct vision_device *dev)
 	u32 *sensor_addrs;
 	u32 *isp_addrs;
 
+	/* FIXME: isp / sensor arrays will be removed as this driver will take care one sensor only */
 	ret = of_property_count_u32_elems(dev->client->dev.of_node, "sensor-reg");
 	if (ret < 0) {
 		dev_err(&dev->client->dev, "Invalid sensor-reg property\n");
@@ -856,15 +544,6 @@ static int camera_config(struct vision_device *dev)
 
 	/* Configure sensors and ISPs one by one */
 	for (i = 0; i < num_sensors; i++) {
-		ret = max9286_write(dev, 0x0a,
-				    MAX9286_FWDCCEN(i) | MAX9286_REVCCEN(i));
-		if (ret < 0) {
-			dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-			return ret;
-		}
-
-		msleep(5);
-
 		/* Configure the serializer */
 		ret = max96705_configure(dev, i);
 		if (ret < 0) {
@@ -902,11 +581,6 @@ static int camera_config(struct vision_device *dev)
 #endif
 
 		usleep_range(5000, 8000);
-		ret = max9286_write(dev, 0x00, MAX9286_MSTLINKSEL_AUTO | MAX9286_LINKEN(i));
-		if (ret < 0) {
-			dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-			return ret;
-		}
 	}
 
 	return 0;
@@ -915,25 +589,6 @@ static int camera_config(struct vision_device *dev)
 static int vision_initialize(struct vision_device *dev)
 {
 	int ret;
-
-	/* Configure the de-serializer */
-	ret = max9286_configure(dev);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	msleep(10);
-
-	pr_info("Configured MAX9286!!");
-
-	ret = max9286_write(dev, 0x0c, 0x91);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
-
-	msleep(5);
 
 	ret = camera_config(dev);
 	if (ret < 0) {
@@ -948,8 +603,6 @@ static int vision_initialize(struct vision_device *dev)
 
 	pr_info("Configured AP0202!!");
 */
-	max9286_configure_i2c(dev, false);
-
 	return 0;
 }
 
@@ -1015,12 +668,6 @@ static ssize_t ultra96_vision_debugfs_write(struct file *f,
 		} else {
 			ap0202_write(dev_debug, _addr, _val, _idx);
 		}
-	} else if (!strcasecmp(cmd, "m0r")) {
-		pr_err("max9286 %s %d 0x%x @ 0x%x\n",
-				__FUNCTION__, __LINE__,
-				max9286_read(dev_debug, _addr), _addr);
-	} else if (!strcasecmp(cmd, "m0w")) {
-		max9286_write(dev_debug, _addr, _val);
 	} else if (!strcasecmp(cmd, "m1r")) {
 		pr_err("max96705 %s %d 0x%x @ 0x%x, idx = %u\n",
 				__FUNCTION__, __LINE__,
