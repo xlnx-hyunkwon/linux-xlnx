@@ -850,6 +850,7 @@
 					#size-cells = <0x0>;
 					reg = <0x1>;
 					label = "LS-I2C1";
+					/*
 					vision1: camera-sensor@6a {
 						compatible = "sensing,vision";
 						reg = <0x6a>;
@@ -868,6 +869,7 @@
 							};
 						};
 					};
+					*/
 				};
 
 				i2c@2 {
