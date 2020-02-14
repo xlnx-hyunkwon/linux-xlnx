@@ -992,23 +992,24 @@ static ssize_t ultra96_vision_debugfs_write(struct file *f,
 	idx = strsep(&kern_buff, " ");
 	if (idx)
 		kstrtou32(idx, 16, &_idx);
-	pr_err("%s %d %x\n", __FUNCTION__, __LINE__, dev_debug);
-	pr_err("%s %d %s %s %s %s\n", __FUNCTION__, __LINE__, cmd, addr, val, idx);
-	pr_err("%s %d %x %x %x\n", __FUNCTION__, __LINE__, _addr, _val, _idx);
+//	pr_err("%s %d %x\n", __FUNCTION__, __LINE__, dev_debug);
+//	pr_err("%s %d %s %s %s %s\n", __FUNCTION__, __LINE__, cmd, addr, val, idx);
+//	pr_err("%s %d %x %x %x\n", __FUNCTION__, __LINE__, _addr, _val, _idx);
 
 	if (!strcasecmp(cmd, "a0r")) {
 		if (_width == 8) {
-			pr_err("ap202 %s %d 0x%x @ 0x%x, idx = %u\n",
+			pr_err("%s %d ap202:r:: 0x%x @ 0x%x, idx = %u\n",
 					__FUNCTION__, __LINE__,
 					ap0202_read8(dev_debug, _addr, _idx),
 					_addr, _idx);
 		} else {
-			pr_err("ap202 %s %d 0x%x @ 0x%x, idx = %u\n",
+			pr_err("%s %d ap202:r:: 0x%x @ 0x%x, idx = %u\n",
 					__FUNCTION__, __LINE__,
 					ap0202_read(dev_debug, _addr, _idx),
 					_addr, _idx);
 		}
 	} else if (!strcasecmp(cmd, "a0w")) {
+		pr_err("%s %d ap202:w:: %s %s %s %s %s\n", __FUNCTION__, __LINE__, cmd, width, addr, val, idx);
 		if (_width == 8) {
 			ap0202_write8(dev_debug, _addr, _val, _idx);
 		} else {
