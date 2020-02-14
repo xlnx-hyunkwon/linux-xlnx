@@ -1679,7 +1679,7 @@
 
 		mipi_csi2_rx_subsystem@80000000 {
 			clock-names = "lite_aclk", "dphy_clk_200M", "video_aclk";
-			clocks = <0x3 0x47 0x26 0x26>;
+			clocks = <0x26 0x26 0x26>;
 			compatible = "xlnx,mipi-csi2-rx-subsystem-4.0";
 			xlnx,en-active-lanes;
 			interrupt-names = "csirxss_csi_irq";
@@ -1763,7 +1763,7 @@
 
 		v_proc_ss@80080000 {
 			clock-names = "aclk_axis", "aclk_ctrl";
-			clocks = <0x26 0x3 0x47>;
+			clocks = <0x26 0x26>;
 			compatible = "xlnx,v-proc-ss-2.0", "xlnx,v-vpss-scaler", "xlnx,vpss-scaler";
 			reg = <0x0 0x80080000 0x0 0x40000>;
 			reset-gpios = <0x10 0x55 0x1>;
