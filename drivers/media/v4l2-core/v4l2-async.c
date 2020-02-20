@@ -273,6 +273,7 @@ v4l2_async_notifier_try_all_subdevs(struct v4l2_async_notifier *notifier)
 	struct v4l2_device *v4l2_dev =
 		v4l2_async_notifier_find_v4l2_dev(notifier);
 	struct v4l2_subdev *sd;
+	struct v4l2_async_notifier *parent;
 
 	if (!v4l2_dev)
 		return 0;
@@ -297,6 +298,24 @@ again:
 		 * parsing the list from the beginning.
 		 */
 		goto again;
+	}
+
+	parent = notifier;
+	while (parent->parent) {
+		parent = parent->parent;
+		list_for_each_entry(sd, &parent->done, async_list) {
+			struct v4l2_async_subdev *asd;
+			int ret;
+
+			asd = v4l2_async_find_match(notifier, sd);
+			if (!asd)
+				continue;
+
+			list_del(&asd->list);
+			ret = v4l2_async_notifier_call_bound(notifier, sd, asd);
+			if (ret < 0)
+				return ret;
+		}
 	}
 
 	return 0;
@@ -382,9 +401,12 @@ v4l2_async_notifier_has_async_subdev(struct v4l2_async_notifier *notifier,
 	}
 
 	/* Check that an asd does not exist in other notifiers. */
-	list_for_each_entry(notifier, &notifier_list, list)
+	list_for_each_entry(notifier, &notifier_list, list) {
+		if (!notifier->v4l2_dev)
+			continue;
 		if (__v4l2_async_notifier_has_async_subdev(notifier, asd))
 			return true;
+	}
 
 	return false;
 }
