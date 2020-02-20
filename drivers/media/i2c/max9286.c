@@ -518,7 +518,7 @@ static int max9286_v4l2_notifier_register(struct max9286_priv *priv)
 		unsigned int i = to_index(priv, source);
 
 		source->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
-		source->asd.match.fwnode = source->fwnode;
+		source->asd.match.fwnode = fwnode_graph_get_port_parent(source->fwnode);
 
 		ret = v4l2_async_notifier_add_subdev(&priv->notifier,
 						     &source->asd);
@@ -794,7 +794,7 @@ static int max9286_v4l2_register(struct max9286_priv *priv)
 		ret = -ENOENT;
 		goto err_async;
 	}
-	priv->sd.fwnode = ep;
+	priv->sd.fwnode = dev_fwnode(dev);
 
 	ret = v4l2_async_register_subdev(&priv->sd);
 	if (ret < 0) {
