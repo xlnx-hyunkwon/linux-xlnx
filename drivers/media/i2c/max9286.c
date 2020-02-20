@@ -669,7 +669,7 @@ static int max9286_set_fmt(struct v4l2_subdev *sd,
 	case MEDIA_BUS_FMT_YVYU8_2X8:
 		break;
 	default:
-		format->format.code = MEDIA_BUS_FMT_YUYV8_2X8;
+		format->format.code = MEDIA_BUS_FMT_UYVY8_1X16;
 		break;
 	}
 
@@ -720,7 +720,7 @@ static void max9286_init_format(struct v4l2_mbus_framefmt *fmt)
 {
 	fmt->width		= 1280;
 	fmt->height		= 800;
-	fmt->code		= MEDIA_BUS_FMT_UYVY8_2X8;
+	fmt->code		= MEDIA_BUS_FMT_UYVY8_1X16;
 	fmt->colorspace		= V4L2_COLORSPACE_SRGB;
 	fmt->field		= V4L2_FIELD_NONE;
 	fmt->ycbcr_enc		= V4L2_YCBCR_ENC_DEFAULT;
