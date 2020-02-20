@@ -832,8 +832,7 @@
 									isp-reg = <0x61>;
 									port {
 										vision_ep0: endpoint {
-											clock-lanes = <1>;
-											data-lanes = <0 2 3 4>;
+										//	clock-lanes = <1>;
 										//	remote-endpoint = <&csiphy0_ep>;
 										//	remote-endpoint = <0x12>;
 											remote-endpoint = <&max9286_in0>;
@@ -1764,7 +1763,7 @@
 		v_proc_ss@80080000 {
 			clock-names = "aclk_axis", "aclk_ctrl";
 			clocks = <0x26 0x26>;
-			compatible = "xlnx,v-proc-ss-2.0", "xlnx,v-vpss-scaler", "xlnx,vpss-scaler";
+			compatible = "xlnx,v-proc-ss-2.0", "xlnx,v-vpss-scaler";
 			reg = <0x0 0x80080000 0x0 0x40000>;
 			reset-gpios = <0x10 0x55 0x1>;
 			xlnx,max-height = <0x870>;
