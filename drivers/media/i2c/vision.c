@@ -194,14 +194,37 @@ static int ap0202_config_change(struct vision_device *dev, u8 index)
 	return 0;
 }
 
+static int max96705_configure(struct vision_device *dev, u8 index);
+static int max96705_configure_address(struct vision_device *dev, u8 addr, u8 index);
 static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 {
+	struct vision_device *dev = sd_to_vision(sd);
+
 	/* Nothing yet */
 	if (enable) {
+		int ret;
+
 		pr_info("Enabling\n");
 
+		max96705_configure(dev, 0);
+		ret = max96705_configure_address(dev, 0x51, 0);
+		if (ret < 0) {
+			dev_err(&dev->max96705[0]->dev, "Unable to write MAX96705\n");
+			return ret;
+		}
+
+		ret = max96705_write(dev, 0x04, 0x87, 0);
+		if (ret < 0) {
+			dev_err(&dev->max96705[0]->dev, "Unable to write MAX96705\n");
+			return ret;
+		}
+		pr_info("Enabling\n");
+
+		msleep(5);
 	} else {
 		pr_info("Disabling\n");
+
+		max96705_configure(dev, 0);
 	}
 
 	return 0;
@@ -542,6 +565,16 @@ static int camera_config(struct vision_device *dev)
 		}
 	}
 
+	ret = max96705_write(dev, 0x04, 0x47, 0);
+	if (ret < 0) {
+		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
+		return ret;
+	}
+
+	msleep(8);
+
+
+#if 0
 	/* Configure sensors and ISPs one by one */
 	for (i = 0; i < num_sensors; i++) {
 		/* Configure the serializer */
@@ -563,25 +596,16 @@ static int camera_config(struct vision_device *dev)
 
 		msleep(10);
 
-		ret = max96705_write(dev, 0x04, 0x87, i);
-		if (ret < 0) {
-			dev_err(&dev->max96705[i]->dev, "Unable to write MAX96705\n");
-			return ret;
-		}
-
-		msleep(5);
-
-#if 0
 		/* Configure the ISP */
 		ret = ap0202_configure(dev, isp_addrs[i], i);
 		if (ret < 0) {
 			dev_err(&dev->ap0202[i]->dev, "Unable to configure AP0202\n");
 			return ret;
 		}
-#endif
 
 		usleep_range(5000, 8000);
 	}
+#endif
 
 	return 0;
 }
@@ -719,6 +743,7 @@ err_dbgfs:
 static int vision_probe(struct i2c_client *client)
 {
 	struct vision_device *dev;
+	struct fwnode_handle *ep;
 	int ret;
 	unsigned int i;
 
@@ -748,7 +773,7 @@ static int vision_probe(struct i2c_client *client)
 	dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 
 	dev->pad.flags = MEDIA_PAD_FL_SOURCE;
-	dev->sd.dev = &client->dev;
+//	dev->sd.dev = &client->dev;
 	dev->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
 	ret = media_entity_pads_init(&dev->sd.entity, 1, &dev->pad);
 	if (ret < 0)
@@ -765,6 +790,17 @@ static int vision_probe(struct i2c_client *client)
 	dev->mf.width = MAX96705_WIDTH;
 	dev->mf.height = MAX96705_HEIGHT;
 	dev->mf.code = MAX96705_FORMAT;
+
+	ep = fwnode_graph_get_next_endpoint(dev_fwnode(&client->dev), NULL);
+	if (!ep) {
+		dev_err(&client->dev,
+			"Unable to get endpoint in node %pOF: %ld\n",
+			client->dev.of_node, PTR_ERR(ep));
+		ret = -ENOENT;
+		goto error;
+	}
+	dev->sd.fwnode = ep;
+	dev->sd.fwnode = dev_fwnode(&client->dev);
 
 	ret = v4l2_async_register_subdev(&dev->sd);
 	if (ret)
