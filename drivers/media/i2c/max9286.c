@@ -905,6 +905,36 @@ static int max9286_setup(struct max9286_priv *priv)
 	 */
 	usleep_range(2000, 5000);
 
+	int ret;
+
+	ret = max9286_write(priv, 0x63, 0x00);
+	if (ret < 0) {
+		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
+		return ret;
+	}
+
+	msleep(5);
+	ret = max9286_write(priv, 0x64, 0x00);
+	if (ret < 0) {
+		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
+		return ret;
+	}
+
+	msleep(5);
+
+	ret = max9286_write(priv, 0x1c, 0xf4);
+	if (ret < 0) {
+		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
+		return ret;
+	}
+	msleep(10);
+	/* this is needed, otherwise streaming hangs */
+	ret = max9286_write(priv, 0x0c, 0x91);
+	if (ret < 0) {
+		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
+		return ret;
+	}
+
 	return 0;
 }
 
