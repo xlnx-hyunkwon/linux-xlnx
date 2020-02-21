@@ -74,7 +74,6 @@ static int max96705_configure_address(struct vision_device *dev, u8 addr)
 {
 	int ret;
 
-	/* Change the MAX96705 I2C address. */
 	ret = max96705_write(dev, 0x00, addr << 1);
 	if (ret < 0) {
 		dev_err(&dev->max96705->dev,
