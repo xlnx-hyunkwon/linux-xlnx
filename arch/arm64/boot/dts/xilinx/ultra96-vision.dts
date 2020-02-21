@@ -785,7 +785,7 @@
 							port@0 {
 								reg = <0>;
 								max9286_in0: endpoint {
-									remote-endpoint = <&vision_ep0>;
+									remote-endpoint = <&max96705_out>;
 								};
 							};
 							port@1 {
@@ -822,15 +822,37 @@
 								  };
 								};
 								*/
-								vision0: camera-sensor@61 {
-									compatible = "sensing,vision";
-									reg = <0x51 0x61>;
-									port {
-										vision_ep0: endpoint {
-											remote-endpoint = <&max9286_in0>;
+								gmsl-serializer@51 {
+									compatible = "maxim,max96705";
+									reg = <0x51>;
+									ports {
+										#address-cells = <1>;
+										#size-cells = <0>;
+										port@0 {
+											reg = <0>;
+											max96705_in: endpoint {
+												remote-endpoint = <&sg1_out>;
+											};
+										};
+										port@1 {
+											reg = <1>;
+											max96705_out: endpoint {
+												remote-endpoint = <&max9286_in0>;
+											};
 										};
 									};
 								};
+
+								camera-sensor@61 {
+									compatible = "sensing,sg1";
+									reg = <0x61>;
+									port {
+										sg1_out: endpoint {
+											remote-endpoint = <&max96705_in>;
+										};
+									};
+								};
+
 							};
 						};
 					};
