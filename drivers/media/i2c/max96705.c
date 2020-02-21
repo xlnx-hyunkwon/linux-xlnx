@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * The driver is the combination of AR0231 + AP0202 + MAX96705
+ * The driver for Maxim MAX96705 serializer
+ *
+ * Copyright (C) 2020 Linaro Ltd.
+ * Copyright (C) 2020 Xilinx, Inc.
+ *
+ * Contacts: Hyun Kwon <hyun.kwon@xilinx.com>
+ *           Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
  */
 
 #include <linux/debugfs.h>
