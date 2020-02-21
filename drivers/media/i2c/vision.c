@@ -117,13 +117,6 @@ static int max96705_configure(struct vision_device *dev)
 		return ret;
 	msleep(8);
 
-	/* Reset the serializer */
-	ret = max96705_write(dev, MAX96705_GPIO_EN,
-			     MAX96705_GPIO_EN_GPIO_PIN(1));
-	if (ret < 0)
-		return ret;
-	msleep(10);
-
 	return 0;
 }
 
