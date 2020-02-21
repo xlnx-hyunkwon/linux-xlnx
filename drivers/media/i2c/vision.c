@@ -217,7 +217,7 @@ static int max96705_initialize(struct max96705_device *dev)
 	return 0;
 }
 
-struct max96705_device *dev_debug;
+static struct max96705_device *dev_debug;
 
 static ssize_t ultra96_max96705_debugfs_write(struct file *f,
 		const char __user *buf, size_t size, loff_t *pos)
@@ -400,7 +400,7 @@ static void max96705_shutdown(struct i2c_client *client)
 
 static const struct of_device_id max96705_of_ids[] = {
 	{ .compatible = "sensing,max96705", },
-	{ .compatible = "max96705", },
+	{ .compatible = "maxim,max96705", },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, max96705_of_ids);
