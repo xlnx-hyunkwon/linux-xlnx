@@ -822,19 +822,11 @@
 								  };
 								};
 								*/
-								vision0: camera-sensor@6a {
+								vision0: camera-sensor@61 {
 									compatible = "sensing,vision";
-									reg = <0x6a>;
-//									sensor-reg = <0x51 0x52 0x53 0x54>;
-//									isp-reg = <0x61 0x62 0x63 0x64>;
-									// one camera
-									sensor-reg = <0x51>;
-									isp-reg = <0x61>;
+									reg = <0x51 0x61>;
 									port {
 										vision_ep0: endpoint {
-										//	clock-lanes = <1>;
-										//	remote-endpoint = <&csiphy0_ep>;
-										//	remote-endpoint = <0x12>;
 											remote-endpoint = <&max9286_in0>;
 										};
 									};
