@@ -183,10 +183,9 @@ static struct v4l2_subdev_ops max96705_subdev_ops = {
 static int max96705_initialize(struct max96705_device *dev)
 {
 	int ret;
-	u32 addrs[2];
+	u32 addr;
 
-	ret = of_property_read_u32_array(dev->max96705->dev.of_node, "reg",
-					addrs, ARRAY_SIZE(addrs));
+	ret = of_property_read_u32(dev->max96705->dev.of_node, "reg", &addr);
 	if (ret < 0) {
 		dev_err(&dev->max96705->dev, "Invalid DT reg property\n");
 		return ret;
@@ -207,7 +206,7 @@ static int max96705_initialize(struct max96705_device *dev)
 		return ret;
 	msleep(8);
 
-	ret = max96705_configure_address(dev, addrs[0]);
+	ret = max96705_configure_address(dev, addr);
 	if (ret < 0) {
 		dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
 		return ret;
