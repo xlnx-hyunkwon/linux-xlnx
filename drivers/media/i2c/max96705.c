@@ -191,6 +191,8 @@ static int max96705_initialize(struct max96705_device *dev)
 		return ret;
 	}
 
+	dev->max96705->addr = MAX96705_I2C_ADDRESS;
+
 	/* FIXME: why is SEREN needed here? */
 	ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
 			     MAX96705_MAIN_CONTROL_SEREN |
