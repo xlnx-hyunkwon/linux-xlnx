@@ -104,7 +104,6 @@ static int max96705_configure(struct vision_device *dev)
 
 	ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
 			     MAX96705_MAIN_CONTROL_SEREN |
-			     MAX96705_MAIN_CONTROL_INTTYPE_UART |
 			     MAX96705_MAIN_CONTROL_REVCCEN |
 			     MAX96705_MAIN_CONTROL_FWDCCEN);
 	if (ret < 0)
@@ -256,7 +255,6 @@ static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 
 		ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
 				     MAX96705_MAIN_CONTROL_SEREN |
-				     MAX96705_MAIN_CONTROL_INTTYPE_UART |
 				     MAX96705_MAIN_CONTROL_REVCCEN |
 				     MAX96705_MAIN_CONTROL_FWDCCEN);
 		if (ret < 0)
