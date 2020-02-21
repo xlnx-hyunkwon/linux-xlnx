@@ -43,6 +43,9 @@ static inline struct vision_device *i2c_to_vision(struct i2c_client *client)
 	return sd_to_vision(i2c_get_clientdata(client));
 }
 
+/* -----------------------------------------------------------------------------
+ * MAX96705
+ */
 static int max96705_write(struct vision_device *dev, u8 reg, u8 val)
 {
 	int ret;
@@ -69,6 +72,58 @@ static int max96705_read(struct vision_device *dev, u8 reg)
 	return ret;
 }
 
+static int max96705_configure_address(struct vision_device *dev, u8 addr)
+{
+	int ret;
+
+	/* Change the MAX96705 I2C address. */
+	ret = max96705_write(dev, 0x00, addr << 1);
+	if (ret < 0) {
+		dev_err(&dev->max96705->dev,
+			"MAX96705 I2C address change failed (%d)\n", ret);
+		return ret;
+	}
+	dev->max96705->addr = addr;
+	usleep_range(3500, 5000);
+
+	return 0;
+}
+
+static int max96705_configure(struct vision_device *dev)
+{
+	int ret;
+
+	ret = max96705_write(dev, 0x04, 0x47);
+	if (ret < 0) {
+		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
+		return ret;
+	}
+
+	msleep(8);
+
+	ret = max96705_write(dev, 0x07, 0x84);
+	if (ret < 0) {
+		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
+		return ret;
+	}
+
+	msleep(8);
+
+	/* Reset the serializer */
+	ret = max96705_write(dev, 0x0e, 0x02);
+	if (ret < 0) {
+		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
+		return ret;
+	}
+
+	msleep(10);
+
+	return 0;
+}
+
+/* -----------------------------------------------------------------------------
+ * AP0202
+ */
 static int ap0202_write8(struct vision_device *dev, u16 reg, u8 val)
 {
 	u8 regbuf[3];
@@ -189,8 +244,9 @@ static int ap0202_config_change(struct vision_device *dev)
 	return 0;
 }
 
-static int max96705_configure(struct vision_device *dev);
-static int max96705_configure_address(struct vision_device *dev, u8 addr);
+/* -----------------------------------------------------------------------------
+ * Common: FIXME: split into separate  drivers
+ */
 static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct vision_device *dev = sd_to_vision(sd);
@@ -310,54 +366,6 @@ static struct v4l2_subdev_ops vision_subdev_ops = {
 	.pad		= &vision_subdev_pad_ops,
 };
 
-static int max96705_configure_address(struct vision_device *dev, u8 addr)
-{
-	int ret;
-
-	/* Change the MAX96705 I2C address. */
-	ret = max96705_write(dev, 0x00, addr << 1);
-	if (ret < 0) {
-		dev_err(&dev->max96705->dev,
-			"MAX96705 I2C address change failed (%d)\n", ret);
-		return ret;
-	}
-	dev->max96705->addr = addr;
-	usleep_range(3500, 5000);
-
-	return 0;
-}
-
-static int max96705_configure(struct vision_device *dev)
-{
-	int ret;
-
-	ret = max96705_write(dev, 0x04, 0x47);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
-		return ret;
-	}
-
-	msleep(8);
-
-	ret = max96705_write(dev, 0x07, 0x84);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
-		return ret;
-	}
-
-	msleep(8);
-
-	/* Reset the serializer */
-	ret = max96705_write(dev, 0x0e, 0x02);
-	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
-		return ret;
-	}
-
-	msleep(10);
-
-	return 0;
-}
 
 static int camera_config(struct vision_device *dev)
 {
@@ -444,7 +452,6 @@ static int vision_initialize(struct vision_device *dev)
 	return 0;
 }
 
-static int ap0202_read(struct vision_device *dev, u16 reg);
 struct vision_device *dev_debug;
 
 static ssize_t ultra96_vision_debugfs_write(struct file *f,
