@@ -39,7 +39,7 @@
 struct max96705_device {
 	struct i2c_client		*max96705;
 	struct v4l2_subdev		sd;
-	struct media_pad		pad;
+	struct media_pad		pads[2];
 	struct v4l2_mbus_framefmt	mf;
 };
 
@@ -116,7 +116,7 @@ static int max96705_get_fmt(struct v4l2_subdev *sd,
 	struct v4l2_mbus_framefmt *mf = &format->format;
 	struct max96705_device *dev = sd_to_max96705(sd);
 
-	if (format->pad)
+	if (format->pad > 1)
 		return -EINVAL;
 
 	*mf = dev->mf;
@@ -132,7 +132,7 @@ static int max96705_set_fmt(struct v4l2_subdev *sd,
 	struct max96705_device *dev = sd_to_max96705(sd);
 	u8 cam_output_format;
 
-	if (format->pad)
+	if (format->pad > 1)
 		return -EINVAL;
 
 	mf->colorspace		= V4L2_COLORSPACE_SRGB;
@@ -327,9 +327,10 @@ static int max96705_probe(struct i2c_client *client)
 	v4l2_i2c_subdev_init(&dev->sd, client, &max96705_subdev_ops);
 	dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 
-	dev->pad.flags = MEDIA_PAD_FL_SOURCE;
+	dev->pads[0].flags = MEDIA_PAD_FL_SINK;
+	dev->pads[1].flags = MEDIA_PAD_FL_SOURCE;
 	dev->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
-	ret = media_entity_pads_init(&dev->sd.entity, 1, &dev->pad);
+	ret = media_entity_pads_init(&dev->sd.entity, 2, dev->pads);
 	if (ret < 0)
 		goto error;
 
