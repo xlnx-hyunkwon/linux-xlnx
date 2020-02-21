@@ -845,7 +845,7 @@
 
 								camera-sensor@61 {
 									compatible = "sensing,sg1";
-									reg = <0x61>;
+									reg = <0x61 0x62>;
 									port {
 										sg1_out: endpoint {
 											remote-endpoint = <&max96705_in>;
