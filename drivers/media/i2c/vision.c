@@ -207,11 +207,8 @@ static int max96705_initialize(struct max96705_device *dev)
 	msleep(8);
 
 	ret = max96705_configure_address(dev, addr);
-	if (ret < 0) {
-		dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
+	if (ret < 0)
 		return ret;
-	}
-	/* TODO: use the 2nd address for sensor */
 
 	return 0;
 }
@@ -393,7 +390,6 @@ static void max96705_shutdown(struct i2c_client *client)
 }
 
 static const struct of_device_id max96705_of_ids[] = {
-	{ .compatible = "sensing,max96705", },
 	{ .compatible = "maxim,max96705", },
 	{ }
 };
