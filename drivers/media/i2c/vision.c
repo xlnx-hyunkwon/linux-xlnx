@@ -368,8 +368,6 @@ static int max96705_probe(struct i2c_client *client)
 
 error:
 	media_entity_cleanup(&dev->sd.entity);
-	if (dev->max96705)
-		i2c_unregister_device(dev->max96705);
 
 	dev_err(&client->dev, "probe failed\n");
 
@@ -383,9 +381,6 @@ static int max96705_remove(struct i2c_client *client)
 	fwnode_handle_put(dev->sd.fwnode);
 	v4l2_async_unregister_subdev(&dev->sd);
 	media_entity_cleanup(&dev->sd.entity);
-
-	if (dev->max96705)
-		i2c_unregister_device(dev->max96705);
 
 	return 0;
 }
