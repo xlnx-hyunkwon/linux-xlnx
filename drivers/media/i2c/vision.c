@@ -24,7 +24,7 @@
 #define MAX96705_FORMAT			MEDIA_BUS_FMT_UYVY8_1X16
 
 struct vision_device {
-	struct i2c_client		*client;
+	struct i2c_client		*vision;
 	struct i2c_client		*max96705;
 	struct i2c_client		*ap0202;
 	struct v4l2_subdev		sd;
@@ -95,7 +95,7 @@ static int max96705_configure(struct vision_device *dev)
 
 	ret = max96705_write(dev, 0x04, 0x47);
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
+		dev_err(&dev->vision->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 
@@ -103,7 +103,7 @@ static int max96705_configure(struct vision_device *dev)
 
 	ret = max96705_write(dev, 0x07, 0x84);
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
+		dev_err(&dev->vision->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 
@@ -112,7 +112,7 @@ static int max96705_configure(struct vision_device *dev)
 	/* Reset the serializer */
 	ret = max96705_write(dev, 0x0e, 0x02);
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
+		dev_err(&dev->vision->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 
@@ -374,41 +374,41 @@ static int camera_config(struct vision_device *dev)
 	u32 *isp_addrs;
 
 	/* FIXME: isp / sensor arrays will be removed as this driver will take care one sensor only */
-	ret = of_property_count_u32_elems(dev->client->dev.of_node, "sensor-reg");
+	ret = of_property_count_u32_elems(dev->vision->dev.of_node, "sensor-reg");
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Invalid sensor-reg property\n");
+		dev_err(&dev->vision->dev, "Invalid sensor-reg property\n");
 		return ret;
 	}
 
 	num_sensors = ret;
 	pr_info("Declared %d sensors in devicetree!\n", num_sensors);
 
-	sensor_addrs = devm_kcalloc(&dev->client->dev, num_sensors,
+	sensor_addrs = devm_kcalloc(&dev->vision->dev, num_sensors,
 				    sizeof(*sensor_addrs), GFP_KERNEL);
 
-	ret = of_property_read_u32_array(dev->client->dev.of_node, "sensor-reg",
+	ret = of_property_read_u32_array(dev->vision->dev.of_node, "sensor-reg",
 					sensor_addrs, num_sensors);
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Invalid sensor-reg property\n");
+		dev_err(&dev->vision->dev, "Invalid sensor-reg property\n");
 		return ret;
 	}
 
-	ret = of_property_count_u32_elems(dev->client->dev.of_node, "isp-reg");
+	ret = of_property_count_u32_elems(dev->vision->dev.of_node, "isp-reg");
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Invalid DT reg property\n");
+		dev_err(&dev->vision->dev, "Invalid DT reg property\n");
 		return ret;
 	}
 
 	num_isps = ret;
 	pr_info("Declared %d ISPs in devicetree!\n", num_isps);
 
-	isp_addrs = devm_kcalloc(&dev->client->dev, num_isps,
+	isp_addrs = devm_kcalloc(&dev->vision->dev, num_isps,
 				    sizeof(*isp_addrs), GFP_KERNEL);
 
-	ret = of_property_read_u32_array(dev->client->dev.of_node, "isp-reg",
+	ret = of_property_read_u32_array(dev->vision->dev.of_node, "isp-reg",
 					isp_addrs, num_isps);
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Invalid sensor-reg property\n");
+		dev_err(&dev->vision->dev, "Invalid sensor-reg property\n");
 		return ret;
 	}
 
@@ -419,18 +419,18 @@ static int camera_config(struct vision_device *dev)
 	}
 
 	/* Create the dummy I2C client for each MAX96705. */
-	dev->max96705 = i2c_new_dummy(dev->client->adapter, MAX96705_I2C_ADDRESS);
+	dev->max96705 = i2c_new_dummy(dev->vision->adapter, MAX96705_I2C_ADDRESS);
 	if (!dev->max96705)
 		return -ENXIO;
 
 	/* Create the dummy I2C client for each AP0202. */
-	dev->ap0202 = i2c_new_dummy(dev->client->adapter, AP0202_I2C_ADDRESS);
+	dev->ap0202 = i2c_new_dummy(dev->vision->adapter, AP0202_I2C_ADDRESS);
 	if (!dev->ap0202)
 		return -ENXIO;
 
 	ret = max96705_write(dev, 0x04, 0x47);
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to write MAX96705\n");
+		dev_err(&dev->vision->dev, "Unable to write MAX96705\n");
 		return ret;
 	}
 
@@ -445,7 +445,7 @@ static int vision_initialize(struct vision_device *dev)
 
 	ret = camera_config(dev);
 	if (ret < 0) {
-		dev_err(&dev->client->dev, "Unable to configure cameras\n");
+		dev_err(&dev->vision->dev, "Unable to configure cameras\n");
 		return ret;
 	}
 
@@ -571,7 +571,7 @@ static int vision_probe(struct i2c_client *client)
 	if (!dev)
 		return -ENOMEM;
 
-	dev->client = client;
+	dev->vision = client;
 
 	/* Initialize the hardware. */
 	ret = vision_initialize(dev);
@@ -593,7 +593,6 @@ static int vision_probe(struct i2c_client *client)
 	dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 
 	dev->pad.flags = MEDIA_PAD_FL_SOURCE;
-//	dev->sd.dev = &client->dev;
 	dev->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
 	ret = media_entity_pads_init(&dev->sd.entity, 1, &dev->pad);
 	if (ret < 0)
