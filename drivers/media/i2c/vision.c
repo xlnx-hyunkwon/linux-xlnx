@@ -98,27 +98,6 @@ static int max96705_configure_address(struct vision_device *dev, u8 addr)
 	return 0;
 }
 
-static int max96705_configure(struct vision_device *dev)
-{
-	int ret;
-
-	ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
-			     MAX96705_MAIN_CONTROL_SEREN |
-			     MAX96705_MAIN_CONTROL_REVCCEN |
-			     MAX96705_MAIN_CONTROL_FWDCCEN);
-	if (ret < 0)
-		return ret;
-	msleep(8);
-
-	ret = max96705_write(dev, MAX96705_CONFIG,
-			     MAX96705_CONFIG_DBL | MAX96705_CONFIG_HVEN);
-	if (ret < 0)
-		return ret;
-	msleep(8);
-
-	return 0;
-}
-
 /* -----------------------------------------------------------------------------
  * AP0202
  */
@@ -247,23 +226,6 @@ static int ap0202_config_change(struct vision_device *dev)
  */
 static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	struct vision_device *dev = sd_to_vision(sd);
-
-	/* Nothing yet */
-	if (enable) {
-		int ret;
-
-		ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
-				     MAX96705_MAIN_CONTROL_SEREN |
-				     MAX96705_MAIN_CONTROL_REVCCEN |
-				     MAX96705_MAIN_CONTROL_FWDCCEN);
-		if (ret < 0)
-			return ret;
-		msleep(5);
-	} else {
-		max96705_configure(dev);
-	}
-
 	return 0;
 }
 
@@ -374,7 +336,20 @@ static int vision_initialize(struct vision_device *dev)
 	if (!dev->ap0202)
 		return -ENXIO;
 
-	max96705_configure(dev);
+	/* FIXME: why is SEREN needed here? */
+	ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
+			     MAX96705_MAIN_CONTROL_SEREN |
+			     MAX96705_MAIN_CONTROL_REVCCEN |
+			     MAX96705_MAIN_CONTROL_FWDCCEN);
+	if (ret < 0)
+		return ret;
+	msleep(8);
+
+	ret = max96705_write(dev, MAX96705_CONFIG,
+			     MAX96705_CONFIG_DBL | MAX96705_CONFIG_HVEN);
+	if (ret < 0)
+		return ret;
+	msleep(8);
 
 	ret = max96705_configure_address(dev, addrs[0]);
 	if (ret < 0) {
