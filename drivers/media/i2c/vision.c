@@ -540,7 +540,6 @@ static int vision_probe(struct i2c_client *client)
 		ret = -ENOENT;
 		goto error;
 	}
-	dev->sd.fwnode = ep;
 	dev->sd.fwnode = dev_fwnode(&client->dev);
 
 	ret = v4l2_async_register_subdev(&dev->sd);
