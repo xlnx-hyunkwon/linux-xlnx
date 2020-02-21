@@ -431,7 +431,7 @@ static int sg1_probe(struct i2c_client *client)
 	if (ret)
 		goto error;
 
-	dev_info(&client->dev, "Vision driver registered\n");
+	dev_info(&client->dev, "SG1 driver registered\n");
 
 	ultra96_sg1_debugfs_init(dev);
 
