@@ -13,7 +13,6 @@
 #include <linux/videodev2.h>
 
 #include <media/v4l2-async.h>
-#include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
 
 #define MAX96705_I2C_ADDRESS		0x40
@@ -29,7 +28,6 @@ struct vision_device {
 	struct i2c_client		*ap0202;
 	struct v4l2_subdev		sd;
 	struct media_pad		pad;
-	struct v4l2_ctrl_handler	ctrls;
 	struct v4l2_mbus_framefmt	mf;
 };
 
@@ -513,17 +511,6 @@ static int vision_probe(struct i2c_client *client)
 	if (ret < 0)
 		goto error;
 
-	v4l2_ctrl_handler_init(&dev->ctrls, 1);
-
-	v4l2_ctrl_new_std(&dev->ctrls, NULL, V4L2_CID_PIXEL_RATE, 50000000,
-                          50000000, 1, 50000000);
-
-	dev->sd.ctrl_handler = &dev->ctrls;
-
-	ret = dev->ctrls.error;
-	if (ret)
-		goto error_free_ctrls;
-
 	v4l2_i2c_subdev_init(&dev->sd, client, &vision_subdev_ops);
 	dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 
@@ -531,7 +518,7 @@ static int vision_probe(struct i2c_client *client)
 	dev->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
 	ret = media_entity_pads_init(&dev->sd.entity, 1, &dev->pad);
 	if (ret < 0)
-		goto error_free_ctrls;
+		goto error;
 
 	/* default format */
 	dev->mf.colorspace = V4L2_COLORSPACE_SRGB;
@@ -558,7 +545,7 @@ static int vision_probe(struct i2c_client *client)
 
 	ret = v4l2_async_register_subdev(&dev->sd);
 	if (ret)
-		goto error_free_ctrls;
+		goto error;
 
 	pr_info("Vision driver registered\n");
 
@@ -566,8 +553,6 @@ static int vision_probe(struct i2c_client *client)
 
 	return 0;
 
-error_free_ctrls:
-	v4l2_ctrl_handler_free(&dev->ctrls);
 error:
 	media_entity_cleanup(&dev->sd.entity);
 	if (dev->max96705)
@@ -587,7 +572,6 @@ static int vision_remove(struct i2c_client *client)
 
 	fwnode_handle_put(dev->sd.fwnode);
 	v4l2_async_unregister_subdev(&dev->sd);
-	v4l2_ctrl_handler_free(&dev->ctrls);
 	media_entity_cleanup(&dev->sd.entity);
 
 	if (dev->max96705)
