@@ -255,12 +255,6 @@ static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable) {
 		int ret;
 
-		ret = max96705_configure_address(dev, 0x51);
-		if (ret < 0) {
-			dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
-			return ret;
-		}
-
 		ret = max96705_write(dev, 0x04, 0x87);
 		if (ret < 0) {
 			dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
@@ -363,52 +357,13 @@ static struct v4l2_subdev_ops vision_subdev_ops = {
 static int camera_config(struct vision_device *dev)
 {
 	int ret, num_sensors, num_isps;
-	u32 *sensor_addrs;
-	u32 *isp_addrs;
+	u32 addrs[2];
 
-	/* FIXME: isp / sensor arrays will be removed as this driver will take care one sensor only */
-	ret = of_property_count_u32_elems(dev->vision->dev.of_node, "sensor-reg");
-	if (ret < 0) {
-		dev_err(&dev->vision->dev, "Invalid sensor-reg property\n");
-		return ret;
-	}
-
-	num_sensors = ret;
-	pr_info("Declared %d sensors in devicetree!\n", num_sensors);
-
-	sensor_addrs = devm_kcalloc(&dev->vision->dev, num_sensors,
-				    sizeof(*sensor_addrs), GFP_KERNEL);
-
-	ret = of_property_read_u32_array(dev->vision->dev.of_node, "sensor-reg",
-					sensor_addrs, num_sensors);
-	if (ret < 0) {
-		dev_err(&dev->vision->dev, "Invalid sensor-reg property\n");
-		return ret;
-	}
-
-	ret = of_property_count_u32_elems(dev->vision->dev.of_node, "isp-reg");
+	ret = of_property_read_u32_array(dev->vision->dev.of_node, "reg",
+					addrs, ARRAY_SIZE(addrs));
 	if (ret < 0) {
 		dev_err(&dev->vision->dev, "Invalid DT reg property\n");
 		return ret;
-	}
-
-	num_isps = ret;
-	pr_info("Declared %d ISPs in devicetree!\n", num_isps);
-
-	isp_addrs = devm_kcalloc(&dev->vision->dev, num_isps,
-				    sizeof(*isp_addrs), GFP_KERNEL);
-
-	ret = of_property_read_u32_array(dev->vision->dev.of_node, "isp-reg",
-					isp_addrs, num_isps);
-	if (ret < 0) {
-		dev_err(&dev->vision->dev, "Invalid sensor-reg property\n");
-		return ret;
-	}
-
-	if (num_sensors != num_isps) {
-		pr_err("Number of ISPs (%d) should match sensors (%d)!",
-		       num_sensors, num_isps);
-		return -ENXIO;
 	}
 
 	/* Create the dummy I2C client for each MAX96705. */
@@ -422,6 +377,13 @@ static int camera_config(struct vision_device *dev)
 		return -ENXIO;
 
 	max96705_configure(dev);
+
+	ret = max96705_configure_address(dev, addrs[0]);
+	if (ret < 0) {
+		dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
+		return ret;
+	}
+	/* TODO: use the 2nd address for sensor */
 
 	return 0;
 }
