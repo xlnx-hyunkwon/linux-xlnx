@@ -257,7 +257,6 @@ static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 
 		pr_info("Enabling\n");
 
-		max96705_configure(dev);
 		ret = max96705_configure_address(dev, 0x51);
 		if (ret < 0) {
 			dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
@@ -428,13 +427,7 @@ static int camera_config(struct vision_device *dev)
 	if (!dev->ap0202)
 		return -ENXIO;
 
-	ret = max96705_write(dev, 0x04, 0x47);
-	if (ret < 0) {
-		dev_err(&dev->vision->dev, "Unable to write MAX96705\n");
-		return ret;
-	}
-
-	msleep(8);
+	max96705_configure(dev);
 
 	return 0;
 }
