@@ -255,8 +255,6 @@ static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable) {
 		int ret;
 
-		pr_info("Enabling\n");
-
 		ret = max96705_configure_address(dev, 0x51);
 		if (ret < 0) {
 			dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
@@ -268,12 +266,8 @@ static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 			dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
 			return ret;
 		}
-		pr_info("Enabling\n");
-
 		msleep(5);
 	} else {
-		pr_info("Disabling\n");
-
 		max96705_configure(dev);
 	}
 
