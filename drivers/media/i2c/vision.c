@@ -547,7 +547,7 @@ static int vision_probe(struct i2c_client *client)
 	if (ret)
 		goto error;
 
-	pr_info("Vision driver registered\n");
+	dev_info(&client->dev, "Vision driver registered\n");
 
 	ultra96_vision_debugfs_init(dev);
 
