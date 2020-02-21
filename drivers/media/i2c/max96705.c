@@ -97,6 +97,19 @@ static int max96705_configure_address(struct max96705_device *dev, u8 addr)
 
 static int max96705_s_stream(struct v4l2_subdev *sd, int enable)
 {
+	struct max96705_device *dev = sd_to_max96705(sd);
+	int ret;
+	u8 control = MAX96705_MAIN_CONTROL_CLINKEN | MAX96705_MAIN_CONTROL_REVCCEN |
+		     MAX96705_MAIN_CONTROL_FWDCCEN;
+
+	if (enable)
+		control |= MAX96705_MAIN_CONTROL_SEREN;
+
+	ret = max96705_write(dev, MAX96705_MAIN_CONTROL, control);
+	if (ret < 0)
+		return ret;
+	msleep(8);
+
 	return 0;
 }
 
@@ -193,9 +206,8 @@ static int max96705_initialize(struct max96705_device *dev)
 
 	dev->max96705->addr = MAX96705_I2C_ADDRESS;
 
-	/* FIXME: why is SEREN needed here? */
 	ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
-			     MAX96705_MAIN_CONTROL_SEREN |
+			     MAX96705_MAIN_CONTROL_CLINKEN |
 			     MAX96705_MAIN_CONTROL_REVCCEN |
 			     MAX96705_MAIN_CONTROL_FWDCCEN);
 	if (ret < 0)
