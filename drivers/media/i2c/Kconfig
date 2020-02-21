@@ -1021,6 +1021,13 @@ config VIDEO_S5C73M3
 	  This is a V4L2 sensor driver for Samsung S5C73M3
 	  8 Mpixel camera.
 
+config VIDEO_AP0202AT
+	tristate "Aptina AP0202AT ISP support"
+	depends on I2C && VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	select V4L2_FWNODE
+	help
+	  This driver supports the Aptina AP0202AT ISP
+
 comment "Lens drivers"
 
 config VIDEO_AD5820
