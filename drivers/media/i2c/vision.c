@@ -353,10 +353,9 @@ static struct v4l2_subdev_ops vision_subdev_ops = {
 	.pad		= &vision_subdev_pad_ops,
 };
 
-
-static int camera_config(struct vision_device *dev)
+static int vision_initialize(struct vision_device *dev)
 {
-	int ret, num_sensors, num_isps;
+	int ret;
 	u32 addrs[2];
 
 	ret = of_property_read_u32_array(dev->vision->dev.of_node, "reg",
@@ -384,19 +383,6 @@ static int camera_config(struct vision_device *dev)
 		return ret;
 	}
 	/* TODO: use the 2nd address for sensor */
-
-	return 0;
-}
-
-static int vision_initialize(struct vision_device *dev)
-{
-	int ret;
-
-	ret = camera_config(dev);
-	if (ret < 0) {
-		dev_err(&dev->vision->dev, "Unable to configure cameras\n");
-		return ret;
-	}
 
 	return 0;
 }
