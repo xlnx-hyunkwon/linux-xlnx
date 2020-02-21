@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * The driver is for AR0231 + AP0202 for SG1 camera sensor
+ * The driver for Sensing Image SG1-AR0231RGB-AP0202-GSML sensor
+ *
+ * Copyright (C) 2020 Linaro Ltd.
+ * Copyright (C) 2020 Xilinx, Inc.
+ *
+ * Contacts: Hyun Kwon <hyun.kwon@xilinx.com>
+ *           Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
  */
 
 #include <linux/debugfs.h>
