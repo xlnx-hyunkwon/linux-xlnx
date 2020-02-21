@@ -15,6 +15,21 @@
 #include <media/v4l2-async.h>
 #include <media/v4l2-subdev.h>
 
+/* MAX96705 registers */
+#define MAX96705_SERADDR			0x00
+#define MAX96705_MAIN_CONTROL			0x04
+#define MAX96705_MAIN_CONTROL_FWDCCEN		BIT(0)
+#define MAX96705_MAIN_CONTROL_REVCCEN		BIT(1)
+#define MAX96705_MAIN_CONTROL_INTTYPE_UART	(1 << 2)
+#define MAX96705_MAIN_CONTROL_CLINKEN		BIT(6)
+#define MAX96705_MAIN_CONTROL_SEREN		BIT(7)
+#define MAX96705_CONFIG				0x07
+#define MAX96705_CONFIG_HVEN			BIT(2)
+#define MAX96705_CONFIG_DBL			BIT(7)
+#define MAX96705_GPIO_EN			0x0e
+#define MAX96705_GPIO_EN_GPIO_PIN(n)		BIT(n)
+
+/* Some default values */
 #define MAX96705_I2C_ADDRESS		0x40
 #define AP0202_I2C_ADDRESS		0x5d
 
@@ -74,12 +89,9 @@ static int max96705_configure_address(struct vision_device *dev, u8 addr)
 {
 	int ret;
 
-	ret = max96705_write(dev, 0x00, addr << 1);
-	if (ret < 0) {
-		dev_err(&dev->max96705->dev,
-			"MAX96705 I2C address change failed (%d)\n", ret);
+	ret = max96705_write(dev, MAX96705_SERADDR, addr << 1);
+	if (ret < 0)
 		return ret;
-	}
 	dev->max96705->addr = addr;
 	usleep_range(3500, 5000);
 
@@ -90,29 +102,26 @@ static int max96705_configure(struct vision_device *dev)
 {
 	int ret;
 
-	ret = max96705_write(dev, 0x04, 0x47);
-	if (ret < 0) {
-		dev_err(&dev->vision->dev, "Unable to write MAX96705\n");
+	ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
+			     MAX96705_MAIN_CONTROL_SEREN |
+			     MAX96705_MAIN_CONTROL_INTTYPE_UART |
+			     MAX96705_MAIN_CONTROL_REVCCEN |
+			     MAX96705_MAIN_CONTROL_FWDCCEN);
+	if (ret < 0)
 		return ret;
-	}
-
 	msleep(8);
 
-	ret = max96705_write(dev, 0x07, 0x84);
-	if (ret < 0) {
-		dev_err(&dev->vision->dev, "Unable to write MAX96705\n");
+	ret = max96705_write(dev, MAX96705_CONFIG,
+			     MAX96705_CONFIG_DBL | MAX96705_CONFIG_HVEN);
+	if (ret < 0)
 		return ret;
-	}
-
 	msleep(8);
 
 	/* Reset the serializer */
-	ret = max96705_write(dev, 0x0e, 0x02);
-	if (ret < 0) {
-		dev_err(&dev->vision->dev, "Unable to write MAX96705\n");
+	ret = max96705_write(dev, MAX96705_GPIO_EN,
+			     MAX96705_GPIO_EN_GPIO_PIN(1));
+	if (ret < 0)
 		return ret;
-	}
-
 	msleep(10);
 
 	return 0;
@@ -252,11 +261,13 @@ static int vision_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable) {
 		int ret;
 
-		ret = max96705_write(dev, 0x04, 0x87);
-		if (ret < 0) {
-			dev_err(&dev->max96705->dev, "Unable to write MAX96705\n");
+		ret = max96705_write(dev, MAX96705_MAIN_CONTROL,
+				     MAX96705_MAIN_CONTROL_SEREN |
+				     MAX96705_MAIN_CONTROL_INTTYPE_UART |
+				     MAX96705_MAIN_CONTROL_REVCCEN |
+				     MAX96705_MAIN_CONTROL_FWDCCEN);
+		if (ret < 0)
 			return ret;
-		}
 		msleep(5);
 	} else {
 		max96705_configure(dev);
