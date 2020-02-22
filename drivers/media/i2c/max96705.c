@@ -114,7 +114,7 @@ static int max96705_s_stream(struct v4l2_subdev *sd, int enable)
 	ret = max96705_write(dev, MAX96705_MAIN_CONTROL, control);
 	if (ret < 0)
 		return ret;
-	msleep(8);
+	msleep(5);
 
 	return 0;
 }
@@ -218,13 +218,13 @@ static int max96705_initialize(struct max96705_device *dev)
 			     MAX96705_MAIN_CONTROL_FWDCCEN);
 	if (ret < 0)
 		return ret;
-	msleep(8);
+	msleep(5);
 
 	ret = max96705_write(dev, MAX96705_CONFIG,
 			     MAX96705_CONFIG_DBL | MAX96705_CONFIG_HVEN);
 	if (ret < 0)
 		return ret;
-	msleep(8);
+	msleep(2);
 
 	/*
 	 * Invert VSYNC through cross-bar mux configuration.
