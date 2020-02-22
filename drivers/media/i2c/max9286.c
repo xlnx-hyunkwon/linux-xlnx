@@ -928,12 +928,6 @@ static int max9286_setup(struct max9286_priv *priv)
 		return ret;
 	}
 	msleep(10);
-	/* this is needed, otherwise streaming hangs */
-	ret = max9286_write(priv, 0x0c, 0x91);
-	if (ret < 0) {
-		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
-		return ret;
-	}
 
 	return 0;
 }
