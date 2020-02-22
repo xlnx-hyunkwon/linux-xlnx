@@ -32,8 +32,8 @@
 #define MAX96705_CONFIG				0x07
 #define MAX96705_CONFIG_HVEN			BIT(2)
 #define MAX96705_CONFIG_DBL			BIT(7)
-#define MAX96705_GPIO_EN			0x0e
-#define MAX96705_GPIO_EN_GPIO_PIN(n)		BIT(n)
+#define MAX96705_CROSSBAR_VS			0x40
+#define MAX96705_CROSSBAR_VS_INVERT_MUX_VS	BIT(5)
 
 /* Some default values */
 #define MAX96705_I2C_ADDRESS		0x40
@@ -222,6 +222,18 @@ static int max96705_initialize(struct max96705_device *dev)
 
 	ret = max96705_write(dev, MAX96705_CONFIG,
 			     MAX96705_CONFIG_DBL | MAX96705_CONFIG_HVEN);
+	if (ret < 0)
+		return ret;
+	msleep(8);
+
+	/*
+	 * Invert VSYNC through cross-bar mux configuration.
+	 * Note, this has to align between sensor and de-serializer.
+	 * Don't distrupt bits other than of interest, bit 5.
+	 */
+	ret = max96705_write(dev, MAX96705_CROSSBAR_VS,
+			     max96705_read(dev, MAX96705_CROSSBAR_VS) |
+			     MAX96705_CROSSBAR_VS_INVERT_MUX_VS);
 	if (ret < 0)
 		return ret;
 	msleep(8);
