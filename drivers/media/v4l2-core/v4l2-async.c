@@ -79,16 +79,12 @@ static bool match_devname(struct v4l2_subdev *sd,
 
 static bool __match_fwnode(struct fwnode_handle *a, struct fwnode_handle *b)
 {
-	if (is_of_node(a) && is_of_node(b))
-		return !of_node_cmp(of_node_full_name(to_of_node(a)),
-				    of_node_full_name(to_of_node(b)));
-	else
-		return a == b;
+	return a && (a == b);
 }
 
 static bool match_fwnode(struct v4l2_subdev *sd, struct v4l2_async_subdev *asd)
 {
-	struct fwnode_handle *asd_fwnode = asd->match.fwnode.fwnode;
+	struct fwnode_handle *asd_fwnode = asd->match.fwnode;
 	struct fwnode_handle *sd_parent, *asd_parent;
 
 	sd_parent = fwnode_graph_get_port_parent(sd->fwnode);
