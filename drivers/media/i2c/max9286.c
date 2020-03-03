@@ -907,6 +907,8 @@ static int max9286_setup(struct max9286_priv *priv)
 
 	int ret;
 
+	/* This seems needed when vsync and fsync get docoupled */
+	/* is this giving frame sync not locked error? */
 	ret = max9286_write(priv, 0x63, 0x00);
 	if (ret < 0) {
 		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
@@ -919,15 +921,16 @@ static int max9286_setup(struct max9286_priv *priv)
 		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
 		return ret;
 	}
-
 	msleep(5);
 
+	// him (0xf0) should be enabled
+	// i believe 0x6 = hibw (pin setting) and 0x4 = 24 bit mode.
 	ret = max9286_write(priv, 0x1c, 0xf4);
 	if (ret < 0) {
 		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
 		return ret;
 	}
-	msleep(10);
+	msleep(5);
 
 	return 0;
 }
