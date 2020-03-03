@@ -149,7 +149,6 @@ static int max96705_set_fmt(struct v4l2_subdev *sd,
 {
 	struct v4l2_mbus_framefmt *mf = &format->format;
 	struct max96705_device *dev = sd_to_max96705(sd);
-	u8 cam_output_format;
 
 	if (format->pad > 1)
 		return -EINVAL;
@@ -160,22 +159,6 @@ static int max96705_set_fmt(struct v4l2_subdev *sd,
 	mf->quantization	= V4L2_QUANTIZATION_DEFAULT;
 	mf->xfer_func		= V4L2_XFER_FUNC_DEFAULT;
 
-	/* FIXME: temporary format handling for debugging */
-	switch (mf->code) {
-	case MEDIA_BUS_FMT_UYVY8_1X16:
-		cam_output_format = 0;
-		break;
-	case MEDIA_BUS_FMT_RBG888_1X24:
-		cam_output_format = 1;
-		break;
-	case MEDIA_BUS_FMT_Y8_1X8:
-		cam_output_format = 2;
-		break;
-	default:
-		/* default to yuv */
-		cam_output_format = 2;
-		break;
-	}
 	/* FIXME: return yuv regardless to make validation happy */
 	mf->code = MEDIA_BUS_FMT_UYVY8_1X16;
 
