@@ -32,6 +32,7 @@
 #define MAX96705_CONFIG				0x07
 #define MAX96705_CONFIG_HVEN			BIT(2)
 #define MAX96705_CONFIG_DBL			BIT(7)
+#define MAX96705_CROSSBAR(x)			(0x20 + x)
 #define MAX96705_CROSSBAR_VS			0x40
 #define MAX96705_CROSSBAR_VS_INVERT_MUX_VS	BIT(5)
 
@@ -149,9 +150,32 @@ static int max96705_set_fmt(struct v4l2_subdev *sd,
 {
 	struct v4l2_mbus_framefmt *mf = &format->format;
 	struct max96705_device *dev = sd_to_max96705(sd);
+	unsigned int i;
+	int ret;
 
 	if (format->pad > 1)
 		return -EINVAL;
+
+	/*
+	 * FIXME: This swaps the LSB and MSB using the crossbar:
+	 * - din0 to dout7, din1 to dout6,,,
+	 * - din16 to dout23, dout17 to dout22,,,
+	 * as it turns out LSB and MSB are swapped in color component
+	 * of captured frames. This is for a specific format, 8bit
+	 * yuv422, and this can be handled by looking at the bus format.
+	 * But such bus format doesn't exist, so it's hardcoded here for
+	 * now. It's also possible that it's swappable in other place.
+	 */
+	for (i = 0; i < 8; i++) {
+		ret = max96705_write(dev, MAX96705_CROSSBAR(i), 7 - i);
+		if (ret)
+			return ret;
+	}
+	for (i = 0; i < 8; i++) {
+		ret = max96705_write(dev, MAX96705_CROSSBAR(16 + i), 23 - i);
+		if (ret)
+			return ret;
+	}
 
 	mf->colorspace		= V4L2_COLORSPACE_SRGB;
 	mf->field		= V4L2_FIELD_NONE;
