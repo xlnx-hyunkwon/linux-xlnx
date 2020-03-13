@@ -169,7 +169,6 @@
 };
 
 &gpu {
-	status = "okay";
 };
 
 &i2c1 {
@@ -472,7 +471,6 @@
 };
 
 &rtc {
-	status = "okay";
 };
 
 /* SD0 only supports 3.3V, no level shifter */
@@ -511,7 +509,6 @@
 };
 
 &spi0 { /* Low Speed connector */
-	status = "okay";
 	label = "LS-SPI0";
 	num-cs = <1>;
 	pinctrl-names = "default";
@@ -519,7 +516,6 @@
 };
 
 &spi1 { /* High Speed connector */
-	status = "okay";
 	label = "HS-SPI1";
 	num-cs = <1>;
 	pinctrl-names = "default";
@@ -530,10 +526,12 @@
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart0_default>;
+	/*
 	bluetooth {
 		compatible = "ti,wl1831-st";
 		enable-gpios = <&gpio 8 GPIO_ACTIVE_HIGH>;
 	};
+	*/
 };
 
 &uart1 {
@@ -574,34 +572,27 @@
 };
 
 &watchdog0 {
-	status = "okay";
 };
 
 &zynqmp_dpsub {
-	status = "okay";
 	phy-names = "dp-phy0", "dp-phy1";
 	phys = <&lane1 PHY_TYPE_DP 0 1 27000000>,
 	       <&lane0 PHY_TYPE_DP 1 1 27000000>;
 };
 
 &zynqmp_dp_snd_pcm0 {
-	status = "okay";
 };
 
 &zynqmp_dp_snd_pcm1 {
-	status = "okay";
 };
 
 &zynqmp_dp_snd_card0 {
-	status = "okay";
 };
 
 &zynqmp_dp_snd_codec0 {
-	status = "okay";
 };
 
 &xlnx_dpdma {
-	status = "okay";
 };
 
 &xilinx_ams {
