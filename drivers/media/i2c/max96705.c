@@ -42,6 +42,8 @@
 #define MAX96705_WIDTH			1280
 #define MAX96705_HEIGHT			800
 #define MAX96705_FORMAT			MEDIA_BUS_FMT_UYVY8_1X16
+#define MAX96705_PAD_SINK		0
+#define MAX96705_PAD_SOURCE		1
 
 struct max96705_device {
 	struct i2c_client		*max96705;
@@ -174,14 +176,71 @@ static int max96705_set_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int max96705_get_mbus_config(struct v4l2_subdev *sd,
+				    unsigned int pad,
+				    struct v4l2_mbus_config *config)
+{
+	struct max96705_device *dev = sd_to_max96705(sd);
+	struct media_pad *remote;
+	struct v4l2_mbus_config mbus_config = { 0 };
+	int ret;
+
+	if (pad != MAX96705_PAD_SOURCE)
+		return -EINVAL;
+
+	remote = media_entity_remote_pad(&sd->entity.pads[MAX96705_PAD_SINK]);
+	if (!remote || !remote->entity)
+		return -ENODEV;
+
+	config->type = V4L2_MBUS_GMSL;
+
+	ret = v4l2_subdev_call(media_entity_to_v4l2_subdev(remote->entity),
+			       pad, get_mbus_config,
+			       remote->index, &mbus_config);
+	if (ret) {
+		if (ret != -ENOIOCTLCMD) {
+			dev_err(&dev->max96705->dev,
+				"failed to get remote mbus configuration\n");
+			return ret;
+		}
+
+		dev_info(&dev->max96705->dev,
+			 "No remote mbus configuration available\n");
+		/* Assume it's active high, compatible to GMSL */
+		config->flags = V4L2_MBUS_GMSL_VSYNC_ACTIVE_HIGH;
+
+		return 0;
+	}
+
+	if (mbus_config.type != V4L2_MBUS_PARALLEL) {
+		dev_err(&dev->max96705->dev,
+			"invalid mbus type %u\n", mbus_config.type);
+		return -EINVAL;
+	}
+
+	/*
+	 * Just propagate the vsync polarity from source to sync, assuming
+	 * it's handled at de-serilizer properly. The max96705 can invert
+	 * vsync (CXTP at 0x4d or CROSSBAR_VS at 0x40) if needed, to make
+	 * sure vsync out is always active high.
+	 */
+	if (mbus_config.flags & V4L2_MBUS_VSYNC_ACTIVE_HIGH)
+		config->flags = V4L2_MBUS_GMSL_VSYNC_ACTIVE_HIGH;
+	else
+		config->flags = V4L2_MBUS_GMSL_VSYNC_ACTIVE_LOW;
+
+	return 0;
+}
+
 static struct v4l2_subdev_video_ops max96705_video_ops = {
 	.s_stream	= max96705_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops max96705_subdev_pad_ops = {
-	.enum_mbus_code = max96705_enum_mbus_code,
-	.get_fmt	= max96705_get_fmt,
-	.set_fmt	= max96705_set_fmt,
+	.enum_mbus_code		= max96705_enum_mbus_code,
+	.get_fmt		= max96705_get_fmt,
+	.set_fmt		= max96705_set_fmt,
+	.get_mbus_config	= max96705_get_mbus_config,
 };
 
 static struct v4l2_subdev_ops max96705_subdev_ops = {
@@ -215,18 +274,6 @@ static int max96705_initialize(struct max96705_device *dev)
 	if (ret < 0)
 		return ret;
 	msleep(2);
-
-	/*
-	 * Invert VSYNC through cross-bar mux configuration.
-	 * Note, this has to align between sensor and de-serializer.
-	 * Don't distrupt bits other than of interest, bit 5.
-	 */
-	ret = max96705_write(dev, MAX96705_CROSSBAR_VS,
-			     max96705_read(dev, MAX96705_CROSSBAR_VS) |
-			     MAX96705_CROSSBAR_VS_INVERT_MUX_VS);
-	if (ret < 0)
-		return ret;
-	msleep(8);
 
 	ret = max96705_configure_address(dev, addr);
 	if (ret < 0)
@@ -350,7 +397,7 @@ static int max96705_probe(struct i2c_client *client)
 
 	dev->pads[0].flags = MEDIA_PAD_FL_SINK;
 	dev->pads[1].flags = MEDIA_PAD_FL_SOURCE;
-	dev->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+	dev->sd.entity.function = MEDIA_ENT_F_VID_IF_BRIDGE;
 	ret = media_entity_pads_init(&dev->sd.entity, 2, dev->pads);
 	if (ret < 0)
 		goto error;
