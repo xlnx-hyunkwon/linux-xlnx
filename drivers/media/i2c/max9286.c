@@ -558,6 +558,70 @@ static void max9286_v4l2_notifier_unregister(struct max9286_priv *priv)
 	v4l2_async_notifier_cleanup(&priv->notifier);
 }
 
+static int max9286_check_source(struct max9286_priv *priv)
+{
+	struct max9286_source *source;
+	unsigned int mbus_flags = 0;
+	u8 val = MAX9286_HVEN | MAX9286_HVSRC_D14;
+	int ret;
+
+	for_each_source(priv, source) {
+		struct v4l2_mbus_config mbus_config = { 0 };
+
+		ret = v4l2_subdev_call(source->sd, pad, get_mbus_config,
+				       source->pad, &mbus_config);
+		if (ret) {
+			if (ret != -ENOIOCTLCMD) {
+				dev_err(&priv->client->dev,
+					"failed to get remote mbus config\n");
+				return ret;
+			}
+
+			dev_dbg(&priv->client->dev,
+				"No remote mbus configuration available\n");
+
+			/* Don't invert or it can be determined by others*/
+
+			continue;
+		}
+
+		if (mbus_config.type != V4L2_MBUS_GMSL) {
+			dev_err(&priv->client->dev,
+				"invalid mbus type %u\n", mbus_config.type);
+			return -EINVAL;
+		}
+
+		/*
+		 * Check if bus properties are identical between sources.
+		 * Individual properties may be handled more gracefully, but
+		 * for now, don't allow any different settings.
+		 */
+		if (!mbus_flags) {
+			mbus_flags = mbus_config.flags;
+		} else {
+			if (mbus_config.flags != mbus_flags) {
+				dev_err(&priv->client->dev,
+					"different bus properties %x:%x\n",
+					mbus_config.flags, mbus_flags);
+				return -EINVAL;
+			}
+		}
+	}
+
+	if (mbus_flags & V4L2_MBUS_GMSL_VSYNC_ACTIVE_LOW)
+		val |= MAX9286_INVVS;
+
+	max9286_write(priv, 0x0c, val);
+
+	/*
+	 * Wait for 2ms to allow the link to resynchronize after the
+	 * configuration change.
+	 */
+	usleep_range(2000, 5000);
+
+	return 0;
+}
+
 static int max9286_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct max9286_priv *priv = sd_to_max9286(sd);
@@ -567,6 +631,10 @@ static int max9286_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret;
 
 	if (enable) {
+		ret = max9286_check_source(priv);
+		if (ret)
+			return ret;
+
 		/*
 		 * The frame sync between cameras is transmitted across the
 		 * reverse channel as GPIO. We must open all channels while
@@ -904,10 +972,6 @@ static int max9286_setup(struct max9286_priv *priv)
 	/* Automatic: FRAMESYNC taken from the slowest Link. */
 	max9286_write(priv, 0x01, MAX9286_FSYNCMODE_INT_HIZ |
 		      MAX9286_FSYNCMETH_AUTO);
-
-	/* Enable HS/VS encoding, use D14/15 for HS/VS, invert VS. */
-	max9286_write(priv, 0x0c, MAX9286_HVEN | MAX9286_INVVS |
-		      MAX9286_HVSRC_D14);
 
 	/*
 	 * Wait for 2ms to allow the link to resynchronize after the
