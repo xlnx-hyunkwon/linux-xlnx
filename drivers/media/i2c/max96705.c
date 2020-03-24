@@ -193,6 +193,8 @@ static int max96705_get_mbus_config(struct v4l2_subdev *sd,
 		return -ENODEV;
 
 	config->type = V4L2_MBUS_GMSL;
+	/* Only 24 bit mode works. Hard-code */
+	config->flags = V4L2_MBUS_GMSL_BWS_24B;
 
 	ret = v4l2_subdev_call(media_entity_to_v4l2_subdev(remote->entity),
 			       pad, get_mbus_config,
@@ -207,7 +209,8 @@ static int max96705_get_mbus_config(struct v4l2_subdev *sd,
 		dev_info(&dev->max96705->dev,
 			 "No remote mbus configuration available\n");
 		/* Assume it's active high, compatible to GMSL */
-		config->flags = V4L2_MBUS_GMSL_VSYNC_ACTIVE_HIGH;
+		config->type = V4L2_MBUS_GMSL;
+		config->flags |= V4L2_MBUS_GMSL_VSYNC_ACTIVE_HIGH;
 
 		return 0;
 	}
@@ -225,9 +228,9 @@ static int max96705_get_mbus_config(struct v4l2_subdev *sd,
 	 * sure vsync out is always active high.
 	 */
 	if (mbus_config.flags & V4L2_MBUS_VSYNC_ACTIVE_HIGH)
-		config->flags = V4L2_MBUS_GMSL_VSYNC_ACTIVE_HIGH;
+		config->flags |= V4L2_MBUS_GMSL_VSYNC_ACTIVE_HIGH;
 	else
-		config->flags = V4L2_MBUS_GMSL_VSYNC_ACTIVE_LOW;
+		config->flags |= V4L2_MBUS_GMSL_VSYNC_ACTIVE_LOW;
 
 	return 0;
 }
