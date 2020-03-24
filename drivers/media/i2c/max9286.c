@@ -564,7 +564,7 @@ static int max9286_check_source(struct max9286_priv *priv)
 {
 	struct max9286_source *source;
 	unsigned int mbus_flags = 0;
-	u8 val = MAX9286_HVEN | MAX9286_HVSRC_D14;
+	u8 val;
 	int ret;
 
 	for_each_source(priv, source) {
@@ -610,10 +610,37 @@ static int max9286_check_source(struct max9286_priv *priv)
 		}
 	}
 
+	val = MAX9286_HVEN | MAX9286_HVSRC_D14;
 	if (mbus_flags & V4L2_MBUS_GMSL_VSYNC_ACTIVE_LOW)
 		val |= MAX9286_INVVS;
 
 	max9286_write(priv, 0x0c, val);
+
+	/*
+	 * 0x1c includes the HIM setting, and the default value depends on
+	 * the pin setting (pin24). Read-back the value, so the setting doesn't
+	 * change.
+	 */
+	ret = max9286_read(priv, 0x1c);
+	if (ret < 0)
+		return -EIO;
+
+	/*
+	 * FIXME: The bit[3:0] of 0x1c are undocumented, but the test shows it
+	 * has to be programmed based on bus-width select. Set up the value with
+	 * below mapping based on the test:
+	 */
+	val = ret & 0xf0;
+	if (mbus_flags & V4L2_MBUS_GMSL_BWS_24B)
+		val |= 0x4;
+	else if (mbus_flags & V4L2_MBUS_GMSL_BWS_27B)
+		val |= 0x6;
+
+	ret = max9286_write(priv, 0x1c, val);
+	if (ret < 0) {
+		dev_err(&priv->client->dev, "Unable to configure MAX9286\n");
+		return ret;
+	}
 
 	/*
 	 * Wait for 2ms to allow the link to resynchronize after the
