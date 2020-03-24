@@ -117,6 +117,8 @@
 #define MAX9286_REV_FLEN(n)		((n) - 20)
 /* Register 0x49 */
 #define MAX9286_VIDEO_DETECT_MASK	0x0f
+/* Register 0x64 */
+#define MAX9286_ENFSINLAST		BIT(5)
 /* Register 0x69 */
 #define MAX9286_LFLTBMONMASKED		BIT(7)
 #define MAX9286_LOCKMONMASKED		BIT(6)
@@ -823,6 +825,53 @@ static const struct v4l2_subdev_internal_ops max9286_subdev_internal_ops = {
 	.open = max9286_open,
 };
 
+#define V4L2_CID_MAX9286_OVERLAP_WINDOW		(V4L2_CID_USER_MAX9286_BASE + 0)
+
+static int max9286_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct max9286_priv *priv = container_of(ctrl->handler,
+						 struct max9286_priv,
+						 ctrls);
+	int ret;
+
+	switch (ctrl->id) {
+	case V4L2_CID_MAX9286_OVERLAP_WINDOW:
+		/* LSB 8 bits */
+		max9286_write(priv, 0x63, ctrl->val & 0xff);
+
+		ret = max9286_read(priv, 0x64);
+		if (ret < 0)
+			return -EIO;
+		/* Preserve other bit */
+		ret &= MAX9286_ENFSINLAST;
+		/* MSB 5 bits */
+		ret |= (ctrl->val >> 8) & 0x1f;
+		max9286_write(priv, 0x64, ret);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static const struct v4l2_ctrl_ops max9286_ctrl_ops = {
+	.s_ctrl	= max9286_s_ctrl,
+};
+
+static struct v4l2_ctrl_config max9286_ctrls[] = {
+	{
+		.ops	= &max9286_ctrl_ops,
+		.id	= V4L2_CID_MAX9286_OVERLAP_WINDOW,
+		.name	= "MAX9286 overlap window",
+		.type	= V4L2_CTRL_TYPE_INTEGER,
+		.min	= 0,
+		.max	= 0x1fff,
+		.step	= 1,
+		.def	= 0,
+	},
+};
+
 static int max9286_v4l2_register(struct max9286_priv *priv)
 {
 	struct device *dev = &priv->client->dev;
@@ -843,13 +892,15 @@ static int max9286_v4l2_register(struct max9286_priv *priv)
 	priv->sd.internal_ops = &max9286_subdev_internal_ops;
 	priv->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 
-	v4l2_ctrl_handler_init(&priv->ctrls, 1);
+	v4l2_ctrl_handler_init(&priv->ctrls, 1 + ARRAY_SIZE(max9286_ctrls));
 	/*
 	 * FIXME: Compute the real pixel rate. The 50 MP/s value comes from the
 	 * hardcoded frequency in the BSP CSI-2 receiver driver.
 	 */
 	v4l2_ctrl_new_std(&priv->ctrls, NULL, V4L2_CID_PIXEL_RATE,
 			  50000000, 50000000, 1, 50000000);
+	for (i = 0; i < ARRAY_SIZE(max9286_ctrls); i++)
+		v4l2_ctrl_new_custom(&priv->ctrls, &max9286_ctrls[i], NULL);
 	priv->sd.ctrl_handler = &priv->ctrls;
 	ret = priv->ctrls.error;
 	if (ret)
@@ -928,6 +979,7 @@ static int max9286_setup(struct max9286_priv *priv)
 		(2 << 6) | (1 << 4) | (0 << 2) | (3 << 0), /* 210x */
 		(3 << 6) | (2 << 4) | (1 << 2) | (0 << 0), /* 3210 */
 	};
+	int ret;
 
 	/*
 	 * Set the I2C bus speed.
@@ -972,6 +1024,14 @@ static int max9286_setup(struct max9286_priv *priv)
 	/* Automatic: FRAMESYNC taken from the slowest Link. */
 	max9286_write(priv, 0x01, MAX9286_FSYNCMODE_INT_HIZ |
 		      MAX9286_FSYNCMETH_AUTO);
+
+	/* Disable overlap window. It can be enabled later using a control */
+	max9286_write(priv, 0x63, 0x00);
+	ret = max9286_read(priv, 0x64);
+	if (ret < 0)
+		return -EIO;
+	ret &= MAX9286_ENFSINLAST;
+	max9286_write(priv, 0x64, ret);
 
 	/*
 	 * Wait for 2ms to allow the link to resynchronize after the
