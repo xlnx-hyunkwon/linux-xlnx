@@ -70,6 +70,15 @@
 					 V4L2_MBUS_CSI2_CHANNEL_2 | \
 					 V4L2_MBUS_CSI2_CHANNEL_3)
 
+/* GMSL interface flags */
+/* GMSL vsync polarity */
+#define V4L2_MBUS_GMSL_VSYNC_ACTIVE_HIGH	BIT(0)
+#define V4L2_MBUS_GMSL_VSYNC_ACTIVE_LOW		BIT(1)
+/* GMSL bus-width-select, between 24, 27, 30 bit */
+#define V4L2_MBUS_GMSL_BWS_24B			BIT(2)
+#define V4L2_MBUS_GMSL_BWS_27B			BIT(3)
+#define V4L2_MBUS_GMSL_BWS_30B			BIT(4)
+
 /**
  * enum v4l2_mbus_type - media bus type
  * @V4L2_MBUS_UNKNOWN:	unknown bus type, no V4L2 mediabus configuration
@@ -80,6 +89,7 @@
  * @V4L2_MBUS_CCP2:	CCP2 (Compact Camera Port 2)
  * @V4L2_MBUS_CSI2_DPHY: MIPI CSI-2 serial interface, with D-PHY
  * @V4L2_MBUS_CSI2_CPHY: MIPI CSI-2 serial interface, with C-PHY
+ * @V4L2_MBUS_GMSL:	GMSL serial interface
  */
 enum v4l2_mbus_type {
 	V4L2_MBUS_UNKNOWN,
@@ -89,6 +99,7 @@ enum v4l2_mbus_type {
 	V4L2_MBUS_CCP2,
 	V4L2_MBUS_CSI2_DPHY,
 	V4L2_MBUS_CSI2_CPHY,
+	V4L2_MBUS_GMSL,
 };
 
 /**
