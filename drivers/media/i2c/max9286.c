@@ -132,6 +132,7 @@
 struct max9286_source {
 	struct v4l2_async_subdev asd;
 	struct v4l2_subdev *sd;
+	unsigned int pad;
 	struct fwnode_handle *fwnode;
 };
 
@@ -432,7 +433,6 @@ static int max9286_notify_bound(struct v4l2_async_notifier *notifier,
 	struct max9286_priv *priv = sd_to_max9286(notifier->sd);
 	struct max9286_source *source = asd_to_max9286_source(asd);
 	unsigned int index = to_index(priv, source);
-	unsigned int src_pad;
 	int ret;
 
 	ret = media_entity_get_fwnode_pad(&subdev->entity,
@@ -446,21 +446,21 @@ static int max9286_notify_bound(struct v4l2_async_notifier *notifier,
 
 	priv->bound_sources |= BIT(index);
 	source->sd = subdev;
-	src_pad = ret;
+	source->pad = ret;
 
-	ret = media_create_pad_link(&source->sd->entity, src_pad,
+	ret = media_create_pad_link(&source->sd->entity, source->pad,
 				    &priv->sd.entity, index,
 				    MEDIA_LNK_FL_ENABLED |
 				    MEDIA_LNK_FL_IMMUTABLE);
 	if (ret) {
 		dev_err(&priv->client->dev,
 			"Unable to link %s:%u -> %s:%u\n",
-			source->sd->name, src_pad, priv->sd.name, index);
+			source->sd->name, source->pad, priv->sd.name, index);
 		return ret;
 	}
 
 	dev_dbg(&priv->client->dev, "Bound %s pad: %u on index %u\n",
-		subdev->name, src_pad, index);
+		subdev->name, source->pad, index);
 
 	/*
 	 * We can only register v4l2_async_notifiers which do not provide a
