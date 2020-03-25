@@ -221,6 +221,34 @@ static int max96705_get_mbus_config(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
+	if (mbus_config.flags & V4L2_MBUS_DATA_LSB) {
+		unsigned int i;
+
+		/*
+		 * FIXME: This swaps the LSB and MSB using the crossbar:
+		 * - din0 to dout7, din1 to dout6,,,
+		 * - din16 to dout23, dout17 to dout22,,,
+		 * as it turns out LSB and MSB are swapped in color component
+		 * of captured frames. This is for a specific format, 8bit
+		 * yuv422, and configuration (double mode). This can be handled
+		 * by looking at the bus format. But such bus format doesn't
+		 * exist, so it's hardcoded here to convert the data layout
+		 * to supported one for now. It's also possible that it's
+		 * swappable in other place such as ISP.
+		 */
+		for (i = 0; i < 8; i++) {
+			ret = max96705_write(dev, MAX96705_CROSSBAR(i), 7 - i);
+			if (ret)
+				return ret;
+		}
+		for (i = 0; i < 8; i++) {
+			ret = max96705_write(dev, MAX96705_CROSSBAR(16 + i),
+					     23 - i);
+			if (ret)
+				return ret;
+		}
+	}
+
 	/*
 	 * Just propagate the vsync polarity from source to sync, assuming
 	 * it's handled at de-serilizer properly. The max96705 can invert
