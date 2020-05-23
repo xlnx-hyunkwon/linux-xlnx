@@ -165,6 +165,8 @@ struct max9286_priv {
 	unsigned int csi2_data_lanes;
 	struct max9286_source sources[MAX9286_NUM_GMSL];
 	struct v4l2_async_notifier notifier;
+
+	struct dentry *debugfs;
 };
 
 static struct max9286_source *next_source(struct max9286_priv *priv,
@@ -1146,6 +1148,99 @@ static int max9286_parse_dt(struct max9286_priv *priv)
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
+
+#include <linux/debugfs.h>
+
+struct max9286_debugfs_dir {
+	struct dentry *dir;
+	int ref_cnt;
+};
+
+static struct max9286_debugfs_dir *dir;
+
+static ssize_t max9286_debugfs_read(struct file *f, char __user *buf,
+				     size_t size, loff_t *pos)
+{
+	struct max9286_priv *priv = f->f_inode->i_private;
+	unsigned int i;
+
+	if (size <= 0)
+		return -EINVAL;
+
+	for (i = 0; i < size; i++)
+		buf[i] = max9286_read(priv, *pos + i);
+	*pos = size + 1;
+
+	return size;
+}
+
+static ssize_t max9286_debugfs_write(struct file *f, const char __user *buf,
+				      size_t size, loff_t *pos)
+{
+	struct max9286_priv *priv = f->f_inode->i_private;
+	unsigned int i;
+
+	if (size <= 0)
+		return -EINVAL;
+
+	for (i = 0; i < size; i++)
+		max9286_write(priv, *pos + i, buf[i]);
+	*pos = size + 1;
+
+	return size;
+}
+
+static const struct file_operations max9286_debugfs_fops = {
+	.owner = THIS_MODULE,
+	.llseek = default_llseek,
+	.read = max9286_debugfs_read,
+	.write = max9286_debugfs_write,
+};
+
+static int max9286_debugfs_init(struct max9286_priv *priv)
+{
+	if (!dir) {
+		dir = kzalloc(sizeof(*dir), GFP_KERNEL);
+		if (!dir)
+			return -ENOMEM;
+
+		dir->dir = debugfs_create_dir("max9286", NULL);
+		if (!dir->dir)
+			return -ENODEV;
+	}
+	dir->ref_cnt++;
+
+	priv->debugfs = debugfs_create_file(dev_name(&priv->client->dev), 0644,
+					   dir->dir, priv,
+					   &max9286_debugfs_fops);
+	return 0;
+}
+
+static void max9286_debugfs_exit(struct max9286_priv *priv)
+{
+	debugfs_remove(priv->debugfs);
+
+	if (--dir->ref_cnt)
+		return;
+
+	debugfs_remove_recursive(dir->dir);
+	dir = NULL;
+}
+
+#else /* CONFIG_DEBUG_FS */
+
+static int max9286_debugfs_init(struct max9286_priv *priv)
+{
+	return 0;
+}
+
+static void max9286_debugfs_exit(struct max9286_priv *priv)
+{
+}
+
+#endif /* CONFIG_DEBUG_FS */
+
 static int max9286_probe(struct i2c_client *client)
 {
 	struct max9286_priv *priv;
@@ -1221,6 +1316,8 @@ static int max9286_probe(struct i2c_client *client)
 	if (ret < 0)
 		goto err_regulator;
 
+	max9286_debugfs_init(priv);
+
 	return 0;
 
 err_regulator:
@@ -1237,6 +1334,8 @@ err_free:
 static int max9286_remove(struct i2c_client *client)
 {
 	struct max9286_priv *priv = i2c_get_clientdata(client);
+
+	max9286_debugfs_exit(priv);
 
 	i2c_mux_del_adapters(priv->mux);
 
