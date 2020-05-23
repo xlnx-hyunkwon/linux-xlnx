@@ -681,6 +681,14 @@ static int max9286_set_fmt(struct v4l2_subdev *sd,
 
 	*cfg_fmt = format->format;
 
+	// overwrite for fsync manual
+	max9286_write(priv, 0x01, MAX9286_FSYNCMODE_INT_HIZ |
+		      MAX9286_FSYNCMETH_MANUAL);
+	// fsync gen. 20fps ( = 100 MHz / 0x4bfd20), but it gives 10 fps
+	max9286_write(priv, 0x06, 0x20);
+	max9286_write(priv, 0x07, 0xfd);
+	max9286_write(priv, 0x08, 0x4b);
+
 	return 0;
 }
 
