@@ -692,15 +692,51 @@ static int frmbuf_verify_format(struct dma_chan *chan, u32 fourcc, u32 type)
 	return -EINVAL;
 }
 
+/**
+ * frmbuf_compat_format - convert the compatible fourcc to supported one
+ * @fourcc: input fourcc. Has to be unsupported one
+ * @type: fourcc type, XDMA_DRM or XDMA_V4L2
+ *
+ * Some formats are not on the supported format list, but essentially the same
+ * from the DMA point of view. This function translates the unsupported but
+ * compatible fourcc into the supported one.
+ *
+ * Return: a supported fourcc on success. Otherwise return the same as input
+ */
+static u32 frmbuf_compat_format(u32 fourcc, u32 type)
+{
+	/* first is the compatible fourcc, second is supported fourcc */
+	static u32 compat[][2] = { { V4L2_PIX_FMT_VYUY, V4L2_PIX_FMT_UYVY } };
+	unsigned int i;
+
+	if (type == XDMA_DRM)
+		return fourcc;
+
+	for (i = 0; i < ARRAY_SIZE(compat); i++) {
+		if (compat[i][0] == fourcc)
+			return compat[i][1];
+	}
+
+	return fourcc;
+}
+
 static void xilinx_xdma_set_config(struct dma_chan *chan, u32 fourcc, u32 type)
 {
 	struct xilinx_frmbuf_chan *xil_chan;
 	int ret;
+	u32 fourcc_compat;
 
 	xil_chan = frmbuf_find_chan(chan);
 	if (IS_ERR(xil_chan))
 		return;
 	ret = frmbuf_verify_format(chan, fourcc, type);
+	if (!ret)
+		return;
+
+	fourcc_compat = frmbuf_compat_format(fourcc, type);
+	if (fourcc_compat != fourcc)
+		ret = frmbuf_verify_format(chan, fourcc_compat, type);
+
 	if (ret == -EINVAL) {
 		dev_err(chan->device->dev,
 			"Framebuffer not configured for fourcc 0x%x\n",
