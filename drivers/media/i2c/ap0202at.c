@@ -227,14 +227,13 @@ static int ap0202at_set_fmt(struct v4l2_subdev *sd,
 
 static int ap0202at_get_mbus_config(struct v4l2_subdev *sd,
 			       unsigned int pad,
-			       struct v4l2_mbus_pad_config *config)
+			       struct v4l2_mbus_config *config)
 {
 	if (pad != AP0202AT_PAD_SOURCE)
 		return -EINVAL;
 
 	config->type = V4L2_MBUS_PARALLEL;
-	config->parallel.vsync_active = true;;
-	config->parallel.msb_align_d0 = true;;
+	config->flags = V4L2_MBUS_VSYNC_ACTIVE_HIGH | V4L2_MBUS_DATA_LSB;
 
 	return 0;
 }
