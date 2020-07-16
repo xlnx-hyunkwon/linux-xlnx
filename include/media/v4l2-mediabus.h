@@ -43,6 +43,8 @@
 #define V4L2_MBUS_VIDEO_SOG_ACTIVE_LOW		BIT(13)
 #define V4L2_MBUS_DATA_ENABLE_HIGH		BIT(14)
 #define V4L2_MBUS_DATA_ENABLE_LOW		BIT(15)
+/* MSB of pixel data is aligned with LSB data bit */
+#define V4L2_MBUS_DATA_LSB			BIT(16)
 
 /* Serial flags */
 /* How many lanes the client can use */
