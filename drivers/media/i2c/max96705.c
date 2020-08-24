@@ -35,6 +35,10 @@
 #define MAX96705_CROSSBAR(x)			(0x20 + x)
 #define MAX96705_CROSSBAR_VS			0x40
 #define MAX96705_CROSSBAR_VS_INVERT_MUX_VS	BIT(5)
+#define MAX96705_SYNC_GEN_CONFIG		0x43
+#define MAX96705_SYNC_GEN_CONFIG_VTG_ONE_VS	0x1
+#define MAX96705_SYNC_GEN_CONFIG_VS_TRIG_RISING	BIT(2)
+#define MAX96705_SYNC_GEN_CONFIG_GEN_VS		BIT(5)
 
 /* Some default values */
 #define MAX96705_I2C_ADDRESS		0x40
@@ -172,6 +176,22 @@ static int max96705_set_fmt(struct v4l2_subdev *sd,
 	mf->code = MEDIA_BUS_FMT_UYVY8_1X16;
 
 	dev->mf = *mf;
+
+	/* manual vsync gen */
+	max96705_write(dev, MAX96705_SYNC_GEN_CONFIG,
+		       MAX96705_SYNC_GEN_CONFIG_VTG_ONE_VS |
+		       MAX96705_SYNC_GEN_CONFIG_VS_TRIG_RISING |
+		       MAX96705_SYNC_GEN_CONFIG_GEN_VS);
+
+	/* vsync high */
+	max96705_write(dev, 0x47, 0x43);
+	max96705_write(dev, 0x48, 0x04);
+	max96705_write(dev, 0x49, 0x80);
+
+	/* vsync low. not needed, but doing it as it makese more sense */
+	max96705_write(dev, 0x4a, 0x02);
+	max96705_write(dev, 0x4b, 0x10);
+	max96705_write(dev, 0x4c, 0x30);
 
 	return 0;
 }
