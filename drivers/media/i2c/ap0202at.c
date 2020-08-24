@@ -258,12 +258,20 @@ static int ap0202at_initialize(struct ap0202at_device *dev)
 {
 	int ret;
 	u32 addr;
+	u16 curr;
+
+	dev->ap0202at->addr = AP0202AT_I2C_ADDRESS;
 
 	ret = of_property_read_u32(dev->ap0202at->dev.of_node, "reg", &addr);
 	if (ret < 0) {
 		dev_err(&dev->ap0202at->dev, "Invalid DT reg property\n");
 		return ret;
 	}
+
+	curr = ap0202at_read(dev, 0x6);
+	curr &= 0x1ff;
+	curr |= (addr & 0xff) << 9;
+	ap0202at_write(dev, 0x6, curr);
 
 	dev->ap0202at->addr = addr;
 
